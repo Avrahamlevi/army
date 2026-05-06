@@ -1,0 +1,108 @@
+import { store, type Achievement } from "./storage";
+
+type Def = { id: string; title: string; description: string; icon: string; check: () => boolean };
+
+const DEFS: Def[] = [
+  {
+    id: "first-run",
+    title: "צעד ראשון",
+    description: "סיימת את הריצה הראשונה שלך",
+    icon: "🎖️",
+    check: () => store.getRuns().length >= 1,
+  },
+  {
+    id: "5k-run",
+    title: "חמישייה",
+    description: "ריצה של 5 ק\"מ ויותר",
+    icon: "🏃",
+    check: () => store.getRuns().some((r) => r.distanceKm >= 5),
+  },
+  {
+    id: "10k-run",
+    title: "עשירייה",
+    description: "10 ק\"מ במכה אחת",
+    icon: "🥇",
+    check: () => store.getRuns().some((r) => r.distanceKm >= 10),
+  },
+  {
+    id: "fast-2k",
+    title: "ברק של 2 ק\"מ",
+    description: "ריצת 2 ק\"מ בפחות מ-9 דקות",
+    icon: "⚡",
+    check: () =>
+      store.getRuns().some(
+        (r) => r.distanceKm >= 2 && r.distanceKm <= 2.3 && r.durationSec <= 9 * 60
+      ),
+  },
+  {
+    id: "10-pullups",
+    title: "10 מתחים",
+    description: "הצלחת 10+ מתחים במבחן",
+    icon: "💪",
+    check: () => store.getTests().some((t) => t.type === "bar" && t.result >= 10),
+  },
+  {
+    id: "bar-or-70",
+    title: "בר-אור 70+",
+    description: "ניקוד בר-אור מעל 70 (גולני+)",
+    icon: "🎯",
+    check: () => {
+      // Take latest tests of each type
+      const tests = store.getTests();
+      const latest = (type: string) => tests.find((t) => t.type === type);
+      const b = latest("bar")?.score ?? 0;
+      const s = latest("situps")?.score ?? 0;
+      const r = latest("run2k")?.score ?? 0;
+      return b > 0 && s > 0 && r > 0 && (b + s + r) / 3 >= 70;
+    },
+  },
+  {
+    id: "consistent-week",
+    title: "שבוע ברצף",
+    description: "התאמנת 5 ימים בשבוע",
+    icon: "🔥",
+    check: () => {
+      const all = [...store.getRuns(), ...store.getStrength()];
+      if (all.length < 5) return false;
+      const week = Date.now() - 7 * 24 * 3600 * 1000;
+      const recent = all.filter((x) => new Date(x.date).getTime() >= week);
+      const days = new Set(recent.map((x) => new Date(x.date).toDateString()));
+      return days.size >= 5;
+    },
+  },
+  {
+    id: "10-runs",
+    title: "10 ריצות",
+    description: "השלמת 10 ריצות",
+    icon: "🏅",
+    check: () => store.getRuns().length >= 10,
+  },
+  {
+    id: "marathon-distance",
+    title: "מרתון של חיים",
+    description: "סך ריצות 42.2 ק\"מ ויותר",
+    icon: "🏆",
+    check: () => store.getRuns().reduce((s, r) => s + r.distanceKm, 0) >= 42.2,
+  },
+  {
+    id: "100k-total",
+    title: "מועדון 100",
+    description: "100 ק\"מ ריצה מצטברים",
+    icon: "👑",
+    check: () => store.getRuns().reduce((s, r) => s + r.distanceKm, 0) >= 100,
+  },
+];
+
+export function checkAchievements(): Achievement[] {
+  const unlockedNow: Achievement[] = [];
+  for (const d of DEFS) {
+    if (d.check()) {
+      const before = store.getAchievements();
+      const list = store.unlock({ id: d.id, title: d.title, description: d.description, icon: d.icon });
+      if (list.length > before.length) unlockedNow.push(list[0]);
+    }
+  }
+  return unlockedNow;
+}
+
+export const ALL_ACHIEVEMENT_DEFS = DEFS;
