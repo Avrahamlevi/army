@@ -1,0 +1,40 @@
+import { Link, useRouterState } from "@tanstack/react-router";
+import { Dumbbell, Crosshair, Activity, History, User } from "lucide-react";
+
+const items = [
+  { to: "/", label: "כוח", icon: Dumbbell },
+  { to: "/idf", label: "צה\"ל", icon: Crosshair },
+  { to: "/run", label: "ריצה", icon: Activity },
+  { to: "/history", label: "היסטוריה", icon: History },
+  { to: "/profile", label: "פרופיל", icon: User },
+] as const;
+
+export function BottomNav() {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  return (
+    <nav
+      dir="rtl"
+      className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 backdrop-blur-md shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.6)]"
+    >
+      <ul className="grid grid-cols-5 max-w-2xl mx-auto">
+        {items.map(({ to, label, icon: Icon }) => {
+          const active = to === "/" ? path === "/" : path.startsWith(to);
+          return (
+            <li key={to}>
+              <Link
+                to={to}
+                className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-bold transition-colors ${
+                  active ? "text-primary text-glow" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className={`h-5 w-5 ${active ? "stroke-[2.5]" : ""}`} />
+                <span>{label}</span>
+                {active && <span className="h-0.5 w-6 bg-primary rounded-full -mt-0.5" />}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
