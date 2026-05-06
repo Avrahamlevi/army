@@ -1,0 +1,147 @@
+/**
+ * IDF fitness test scoring (approximation based on publicly-circulated tables).
+ * NOT official — use for training feedback only.
+ *
+ * Tests covered:
+ *  - Pull-ups (bar) — reps
+ *  - Sit-ups (kalker) 2 min — reps
+ *  - 2000m run — seconds
+ *  - 3000m run — seconds
+ *  - Crawl 50m — seconds
+ *  - Rope climb 6m — seconds
+ *
+ * Scoring 0-100. Bar-Or (בר-אור) total = sum of pull-ups + sit-ups + run scores / 3.
+ */
+
+export type TestType = "bar" | "situps" | "run2k" | "run3k" | "crawl" | "rope";
+
+type Curve = { value: number; score: number }[];
+
+// Higher reps = higher score
+const BAR: Curve = [
+  { value: 0, score: 0 },
+  { value: 3, score: 40 },
+  { value: 6, score: 60 },
+  { value: 9, score: 75 },
+  { value: 12, score: 85 },
+  { value: 15, score: 92 },
+  { value: 18, score: 97 },
+  { value: 22, score: 100 },
+];
+
+const SITUPS: Curve = [
+  { value: 20, score: 40 },
+  { value: 40, score: 60 },
+  { value: 55, score: 75 },
+  { value: 70, score: 85 },
+  { value: 85, score: 95 },
+  { value: 100, score: 100 },
+];
+
+// Lower seconds = higher score
+const RUN2K: Curve = [
+  { value: 7 * 60, score: 100 }, // 7:00
+  { value: 7 * 60 + 30, score: 95 },
+  { value: 8 * 60, score: 88 },
+  { value: 8 * 60 + 30, score: 80 },
+  { value: 9 * 60, score: 72 },
+  { value: 9 * 60 + 30, score: 64 },
+  { value: 10 * 60, score: 55 },
+  { value: 11 * 60, score: 40 },
+  { value: 12 * 60, score: 25 },
+  { value: 14 * 60, score: 10 },
+];
+
+const RUN3K: Curve = [
+  { value: 11 * 60, score: 100 },
+  { value: 12 * 60, score: 90 },
+  { value: 13 * 60, score: 80 },
+  { value: 14 * 60, score: 68 },
+  { value: 15 * 60, score: 55 },
+  { value: 16 * 60, score: 42 },
+  { value: 18 * 60, score: 25 },
+  { value: 20 * 60, score: 10 },
+];
+
+const CRAWL: Curve = [
+  { value: 30, score: 100 },
+  { value: 40, score: 88 },
+  { value: 50, score: 75 },
+  { value: 60, score: 60 },
+  { value: 75, score: 45 },
+  { value: 90, score: 30 },
+];
+
+const ROPE: Curve = [
+  { value: 5, score: 100 },
+  { value: 8, score: 90 },
+  { value: 12, score: 78 },
+  { value: 16, score: 65 },
+  { value: 22, score: 50 },
+  { value: 30, score: 30 },
+];
+
+function interp(curve: Curve, value: number, lowerIsBetter: boolean): number {
+  const sorted = [...curve].sort((a, b) =>
+    lowerIsBetter ? a.value - b.value : a.value - b.value
+  );
+  if (lowerIsBetter) {
+    if (value <= sorted[0].value) return sorted[0].score;
+    if (value >= sorted[sorted.length - 1].value) return sorted[sorted.length - 1].score;
+  } else {
+    if (value <= sorted[0].value) return sorted[0].score;
+    if (value >= sorted[sorted.length - 1].value) return sorted[sorted.length - 1].score;
+  }
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const a = sorted[i],
+      b = sorted[i + 1];
+    if (value >= a.value && value <= b.value) {
+      const t = (value - a.value) / (b.value - a.value);
+      return Math.round(a.score + t * (b.score - a.score));
+    }
+  }
+  return 0;
+}
+
+export function scoreTest(type: TestType, value: number): number {
+  switch (type) {
+    case "bar":
+      return interp(BAR, value, false);
+    case "situps":
+      return interp(SITUPS, value, false);
+    case "run2k":
+      return interp(RUN2K, value, true);
+    case "run3k":
+      return interp(RUN3K, value, true);
+    case "crawl":
+      return interp(CRAWL, value, true);
+    case "rope":
+      return interp(ROPE, value, true);
+  }
+}
+
+export function barOrScore(barReps: number, situps: number, run2kSec: number) {
+  const a = scoreTest("bar", barReps);
+  const b = scoreTest("situps", situps);
+  const c = scoreTest("run2k", run2kSec);
+  return { bar: a, situps: b, run: c, total: Math.round((a + b + c) / 3) };
+}
+
+export const TEST_LABELS: Record<TestType, { he: string; unit: string; lowerBetter: boolean }> = {
+  bar: { he: "מתח (בר)", unit: "חזרות", lowerBetter: false },
+  situps: { he: "כפיפות בטן (קלקר) — 2 דק׳", unit: "חזרות", lowerBetter: false },
+  run2k: { he: "ריצת 2000מ׳", unit: "שניות", lowerBetter: true },
+  run3k: { he: "ריצת 3000מ׳", unit: "שניות", lowerBetter: true },
+  crawl: { he: "זחילה 50מ׳", unit: "שניות", lowerBetter: true },
+  rope: { he: "טיפוס חבל 6מ׳", unit: "שניות", lowerBetter: true },
+};
+
+// Unit benchmarks — minimum total Bar-Or score targets
+export const UNIT_TARGETS = {
+  general: { label: "כללי / קבצ\"ן", target: 60 },
+  golani: { label: "גולני / גבעתי / נחל / כפיר", target: 70 },
+  tzanchanim: { label: "צנחנים", target: 78 },
+  sayeret: { label: "סיירת גולני / מגלן / אגוז / דובדבן", target: 88 },
+  yabal: { label: 'יחב"ל / שייטת', target: 95 },
+  "13": { label: "שייטת 13 / מטכ\"ל", target: 98 },
+} as const;
