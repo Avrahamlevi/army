@@ -1,0 +1,242 @@
+// Structured training plans by unit and weeks
+import type { TestType } from "./idf-scoring";
+
+export type UnitKey = "general" | "golani" | "tzanchanim" | "sayeret" | "yabal" | "13";
+
+export type WorkoutDay = {
+  day: number; // 1-7
+  title: string;
+  type: "run" | "strength" | "interval" | "test" | "rest" | "ruck";
+  blocks: { name: string; detail: string }[];
+};
+
+export type WeekPlan = {
+  week: number;
+  focus: string;
+  days: WorkoutDay[];
+};
+
+const REST: WorkoutDay = { day: 0, title: "מנוחה / שחייה קלה", type: "rest", blocks: [] };
+
+function strengthDay(day: number, focus: "upper" | "lower" | "core" | "full"): WorkoutDay {
+  const map = {
+    upper: {
+      title: "כוח עליון — דחיפה ומשיכה",
+      blocks: [
+        { name: "חימום", detail: "5 דק׳ ריצה קלה + מתיחות דינמיות" },
+        { name: "מתח", detail: "5 סטים × מקסימום (תרגול תנופה אם צריך)" },
+        { name: "שכיבות סמיכה", detail: "5 × 15-25" },
+        { name: "מקבילים / Dips", detail: "4 × 8-12" },
+        { name: "חתירה הפוכה", detail: "4 × 10" },
+        { name: "ליבה", detail: "פלאנק 3×60ש׳ + קלקר 3×30" },
+      ],
+    },
+    lower: {
+      title: "כוח רגליים + פליאומטריקה",
+      blocks: [
+        { name: "חימום", detail: "5 דק׳ ריצה + סקוואטים דינמיים" },
+        { name: "סקוואט גובלט", detail: "5 × 10" },
+        { name: "פיצולים", detail: "4 × 12 לכל רגל" },
+        { name: "קפיצות בוקס", detail: "5 × 6" },
+        { name: "Calf raises", detail: "4 × 20" },
+        { name: "ליבה", detail: "Russian twists 4 × 30" },
+      ],
+    },
+    core: {
+      title: "ליבה + יציבות + סיבולת שרירית",
+      blocks: [
+        { name: "מעגל ליבה x4", detail: "פלאנק 60ש׳, צד 30ש׳/צד, hollow 30ש׳, V-ups 15" },
+        { name: "טיפוס הר", detail: "4 × 40 חזרות" },
+        { name: "Burpees", detail: "5 × 10" },
+        { name: "Farmer carry", detail: "4 × 30 מ׳" },
+      ],
+    },
+    full: {
+      title: "Full Body — אימון משולב",
+      blocks: [
+        { name: "מעגל A × 4", detail: "10 שכיבות, 10 סקוואט, 5 מתח, 15 קלקר" },
+        { name: "מעגל B × 3", detail: "20 burpees, 30ש׳ פלאנק, 10 קפיצות" },
+        { name: "ריצת סיום", detail: "1 ק״מ קל" },
+      ],
+    },
+  };
+  const m = map[focus];
+  return { day, title: m.title, type: "strength", blocks: m.blocks };
+}
+
+function runDay(day: number, kind: "tempo" | "long" | "interval" | "easy" | "hill"): WorkoutDay {
+  const map = {
+    easy: {
+      title: "ריצה קלה (אירובי)",
+      type: "run" as const,
+      blocks: [
+        { name: "חימום", detail: "5 דק׳ הליכה" },
+        { name: "ריצה רציפה", detail: "30-40 דק׳ קצב נוח (יכול לדבר)" },
+        { name: "סיום", detail: "מתיחות סטטיות 5 דק׳" },
+      ],
+    },
+    tempo: {
+      title: "ריצת טמפו (סף לקטט)",
+      type: "run" as const,
+      blocks: [
+        { name: "חימום", detail: "10 דק׳ קל" },
+        { name: "טמפו", detail: "20 דק׳ קצב מאתגר ויציב (~80% מאמץ)" },
+        { name: "שחרור", detail: "5 דק׳ קל" },
+      ],
+    },
+    interval: {
+      title: "אינטרוולים — מהירות",
+      type: "interval" as const,
+      blocks: [
+        { name: "חימום", detail: "10 דק׳ ריצה קלה + שיפוצים" },
+        { name: "אינטרוולים", detail: "8 × 400מ׳ קצב 5K, מנוחה 90ש׳" },
+        { name: "שחרור", detail: "5 דק׳ קל" },
+      ],
+    },
+    long: {
+      title: "ריצה ארוכה — בניית סיבולת",
+      type: "run" as const,
+      blocks: [
+        { name: "חימום", detail: "5 דק׳" },
+        { name: "ריצה ארוכה", detail: "60-90 דק׳ בקצב נוח" },
+      ],
+    },
+    hill: {
+      title: "ריצת עליות",
+      type: "interval" as const,
+      blocks: [
+        { name: "חימום", detail: "10 דק׳" },
+        { name: "עליות", detail: "10 × 60ש׳ עלייה חזק, ירידה הליכה" },
+        { name: "שחרור", detail: "5 דק׳" },
+      ],
+    },
+  };
+  return { day, ...map[kind] };
+}
+
+function ruckDay(day: number, weightKg: number, distanceKm: number): WorkoutDay {
+  return {
+    day,
+    title: `מסע עם משקל ${weightKg}ק״ג / ${distanceKm}ק״מ`,
+    type: "ruck",
+    blocks: [
+      { name: "ציוד", detail: `תיק עם ${weightKg} ק״ג, נעלי שטח, מים` },
+      { name: "מסע", detail: `${distanceKm} ק״מ בקצב 6:30-7:30 דק׳/ק״מ` },
+      { name: "סיום", detail: "מתיחות + הזנה" },
+    ],
+  };
+}
+
+const TEMPLATES: Record<UnitKey, { weeks: number; build: (week: number, totalWeeks: number) => WeekPlan }> = {
+  general: {
+    weeks: 8,
+    build: (w, total) => ({
+      week: w,
+      focus: w <= total / 2 ? "בניית בסיס" : "שיפור והגעה לשיא",
+      days: [
+        runDay(1, "easy"),
+        strengthDay(2, "full"),
+        runDay(3, w <= 3 ? "easy" : "tempo"),
+        REST,
+        strengthDay(5, "core"),
+        runDay(6, w <= 4 ? "easy" : "interval"),
+        REST,
+      ],
+    }),
+  },
+  golani: {
+    weeks: 12,
+    build: (w, total) => ({
+      week: w,
+      focus: w <= 4 ? "בסיס אירובי + כוח" : w <= 8 ? "עוצמה + מהירות" : "סימולציות בר-אור",
+      days: [
+        runDay(1, w <= 4 ? "easy" : "tempo"),
+        strengthDay(2, "upper"),
+        runDay(3, "interval"),
+        ruckDay(4, 10 + Math.floor(w / 2), 5 + Math.floor(w / 2)),
+        strengthDay(5, "lower"),
+        runDay(6, "long"),
+        REST,
+      ],
+    }),
+  },
+  tzanchanim: {
+    weeks: 14,
+    build: (w, total) => ({
+      week: w,
+      focus: w <= 5 ? "בסיס" : w <= 10 ? "כוח-סיבולת" : "שיא",
+      days: [
+        runDay(1, "tempo"),
+        strengthDay(2, "upper"),
+        runDay(3, "interval"),
+        strengthDay(4, "core"),
+        ruckDay(5, 12 + Math.floor(w / 2), 6 + w),
+        runDay(6, "long"),
+        REST,
+      ],
+    }),
+  },
+  sayeret: {
+    weeks: 16,
+    build: (w, total) => ({
+      week: w,
+      focus: w <= 6 ? "בסיס מסיבי" : w <= 12 ? "עוצמה אינטנסיבית" : "שיא + סימולציה",
+      days: [
+        runDay(1, "tempo"),
+        strengthDay(2, "upper"),
+        runDay(3, "interval"),
+        strengthDay(4, "lower"),
+        ruckDay(5, 15 + w, 8 + w),
+        runDay(6, "long"),
+        runDay(7, "easy"),
+      ],
+    }),
+  },
+  yabal: {
+    weeks: 16,
+    build: (w, total) => ({
+      week: w,
+      focus: "אימון יחב\"ל — שילוב מים + כוח",
+      days: [
+        runDay(1, "interval"),
+        strengthDay(2, "upper"),
+        { day: 3, title: "שחייה 1500מ׳ + עצירות נשימה", type: "run", blocks: [{ name: "שחייה", detail: "30×50מ׳ הקלה / חופשי לסירוגין" }, { name: "עצירת נשימה", detail: "10×30ש׳" }] },
+        strengthDay(4, "core"),
+        ruckDay(5, 18, 10 + w),
+        runDay(6, "long"),
+        runDay(7, "easy"),
+      ],
+    }),
+  },
+  "13": {
+    weeks: 20,
+    build: (w, total) => ({
+      week: w,
+      focus: "שיא — שייטת 13 רמת אליטה",
+      days: [
+        runDay(1, "interval"),
+        strengthDay(2, "upper"),
+        { day: 3, title: "שחייה 2000מ׳ + צלילה", type: "run", blocks: [{ name: "שחייה רציפה", detail: "2000מ׳ ללא הפסקה" }, { name: "עצירת נשימה", detail: "מקס × 5" }] },
+        strengthDay(4, "lower"),
+        ruckDay(5, 25, 12 + w),
+        runDay(6, "long"),
+        strengthDay(7, "core"),
+      ],
+    }),
+  },
+};
+
+export function buildPlan(unit: UnitKey, weeksOverride?: number): WeekPlan[] {
+  const tpl = TEMPLATES[unit];
+  const total = weeksOverride ?? tpl.weeks;
+  return Array.from({ length: total }, (_, i) => tpl.build(i + 1, total));
+}
+
+export const UNIT_PLAN_INFO: Record<UnitKey, { label: string; defaultWeeks: number; emoji: string; color: string }> = {
+  general: { label: "כללי / קבצ\"ן", defaultWeeks: 8, emoji: "🎯", color: "tactical" },
+  golani: { label: "גולני / גבעתי / נחל", defaultWeeks: 12, emoji: "🟤", color: "warning" },
+  tzanchanim: { label: "צנחנים", defaultWeeks: 14, emoji: "🔴", color: "destructive" },
+  sayeret: { label: "סיירת / מגלן / דובדבן", defaultWeeks: 16, emoji: "⚫", color: "primary" },
+  yabal: { label: "יחב\"ל / שייטת 13 הכנה", defaultWeeks: 16, emoji: "🌊", color: "success" },
+  "13": { label: "שייטת 13 — אליטה", defaultWeeks: 20, emoji: "🦅", color: "primary" },
+};
