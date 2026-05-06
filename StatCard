@@ -1,0 +1,57 @@
+import { type ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+export function StatCard({
+  value,
+  label,
+  accent = "primary",
+  icon,
+}: {
+  value: ReactNode;
+  label: string;
+  accent?: "primary" | "destructive" | "success" | "warning";
+  icon?: ReactNode;
+}) {
+  const colors = {
+    primary: "text-primary",
+    destructive: "text-destructive",
+    success: "text-success",
+    warning: "text-warning",
+  };
+  return (
+    <div className="rounded-xl border border-border bg-card p-3 text-center shadow-card relative overflow-hidden">
+      {icon && <div className="absolute top-2 left-2 opacity-30">{icon}</div>}
+      <div className={cn("font-display text-3xl tabular-nums leading-none", colors[accent])}>
+        {value}
+      </div>
+      <div className="text-[10px] text-muted-foreground mt-1 tracking-wider uppercase">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+export function Section({
+  title,
+  children,
+  action,
+  icon,
+}: {
+  title: string;
+  children: ReactNode;
+  action?: ReactNode;
+  icon?: ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-border bg-card shadow-card mb-3 overflow-hidden">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card-elevated/40">
+        <div className="flex items-center gap-2">
+          {icon && <span className="text-primary">{icon}</span>}
+          <h3 className="font-display text-base text-primary">{title}</h3>
+        </div>
+        {action}
+      </header>
+      <div className="p-4">{children}</div>
+    </section>
+  );
+}
