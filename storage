@@ -1,0 +1,168 @@
+// LocalStorage helpers — persists everything client-side
+export type Run = {
+  id: string;
+  date: string; // ISO
+  distanceKm: number;
+  durationSec: number;
+  paceSecPerKm: number;
+  calories: number;
+  elevationUp: number;
+  elevationDown: number;
+  coords?: [number, number][];
+  note?: string;
+};
+
+export type StrengthSession = {
+  id: string;
+  date: string;
+  name: string;
+  exercises: { name: string; sets: number; reps: string; weightKg?: number }[];
+  totalVolume?: number;
+  notes?: string;
+};
+
+export type IdfTest = {
+  id: string;
+  date: string;
+  type: "bar" | "situps" | "run2k" | "run3k" | "crawl" | "rope";
+  result: number; // reps / seconds
+  score: number; // 0-100
+};
+
+export type MonthlyProgress = {
+  id: string;
+  date: string;
+  runScore?: number;
+  strengthScore?: number;
+  idfScore?: number;
+  notes?: string;
+};
+
+export type Achievement = {
+  id: string;
+  unlockedAt: string;
+  title: string;
+  description: string;
+  icon: string;
+};
+
+export type Profile = {
+  age: number;
+  weightKg: number;
+  heightCm?: number;
+  targetUnit?: "golani" | "tzanchanim" | "sayeret" | "yabal" | "13" | "general";
+  targetEventDate?: string;
+  name?: string;
+};
+
+const KEYS = {
+  runs: "rp_runs",
+  strength: "rp_strength",
+  tests: "rp_idf_tests",
+  monthly: "rp_monthly",
+  profile: "rp_profile",
+  achievements: "rp_achievements",
+  plan: "rp_active_plan",
+  poiPrefs: "rp_poi_prefs",
+} as const;
+
+function read<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function write<T>(key: string, value: T) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+export const store = {
+  getRuns: () => read<Run[]>(KEYS.runs, []),
+  addRun: (r: Run) => {
+    const list = [r, ...store.getRuns()];
+    write(KEYS.runs, list);
+    return list;
+  },
+  deleteRun: (id: string) => {
+    const list = store.getRuns().filter((r) => r.id !== id);
+    write(KEYS.runs, list);
+    return list;
+  },
+
+  getStrength: () => read<StrengthSession[]>(KEYS.strength, []),
+  addStrength: (s: StrengthSession) => {
+    const list = [s, ...store.getStrength()];
+    write(KEYS.strength, list);
+    return list;
+  },
+
+  getTests: () => read<IdfTest[]>(KEYS.tests, []),
+  addTest: (t: IdfTest) => {
+    const list = [t, ...store.getTests()];
+    write(KEYS.tests, list);
+    return list;
+  },
+
+  getMonthly: () => read<MonthlyProgress[]>(KEYS.monthly, []),
+  addMonthly: (m: MonthlyProgress) => {
+    const list = [m, ...store.getMonthly()];
+    write(KEYS.monthly, list);
+    return list;
+  },
+
+  getProfile: () =>
+    read<Profile>(KEYS.profile, { age: 18, weightKg: 70, targetUnit: "general" }),
+  saveProfile: (p: Profile) => write(KEYS.profile, p),
+
+  getAchievements: () => read<Achievement[]>(KEYS.achievements, []),
+  unlock: (a: Omit<Achievement, "unlockedAt">) => {
+    const list = store.getAchievements();
+    if (list.find((x) => x.id === a.id)) return list;
+    const next = [{ ...a, unlockedAt: new Date().toISOString() }, ...list];
+    write(KEYS.achievements, next);
+    return next;
+  },
+
+  exportAll: () => {
+    const blob = {
+      runs: store.getRuns(),
+      strength: store.getStrength(),
+      tests: store.getTests(),
+      monthly: store.getMonthly(),
+      profile: store.getProfile(),
+      achievements: store.getAchievements(),
+      exportedAt: new Date().toISOString(),
+    };
+    return JSON.stringify(blob, null, 2);
+  },
+  importAll: (json: string) => {
+    const parsed = JSON.parse(json);
+    if (parsed.runs) write(KEYS.runs, parsed.runs);
+    if (parsed.strength) write(KEYS.strength, parsed.strength);
+    if (parsed.tests) write(KEYS.tests, parsed.tests);
+    if (parsed.monthly) write(KEYS.monthly, parsed.monthly);
+    if (parsed.profile) write(KEYS.profile, parsed.profile);
+    if (parsed.achievements) write(KEYS.achievements, parsed.achievements);
+  },
+};
+
+export function uid() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+export function fmtTime(sec: number) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
+}
+export function fmtPace(secPerKm: number) {
+  if (!isFinite(secPerKm) || secPerKm <= 0) return "--:--";
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.floor(secPerKm % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
