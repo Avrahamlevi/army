@@ -1,0 +1,76 @@
+import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { Bell } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+export function TopBar() {
+  const [time, setTime] = useState("");
+  const [date, setDate] = useState("");
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date();
+      setTime(
+        [d.getHours(), d.getMinutes(), d.getSeconds()]
+          .map((n) => String(n).padStart(2, "0"))
+          .join(":")
+      );
+      setDate(d.toLocaleDateString("he-IL", { weekday: "short", day: "numeric", month: "short" }));
+    };
+    tick();
+    const i = setInterval(tick, 1000);
+    return () => clearInterval(i);
+  }, []);
+
+  return (
+    <header
+      dir="rtl"
+      className="sticky top-0 z-30 bg-card/90 backdrop-blur border-b border-border"
+    >
+      <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 group">
+          <div className="h-9 w-9 rounded-md bg-primary-grad flex items-center justify-center shadow-glow">
+            <span className="font-display text-primary-foreground text-lg leading-none">RP</span>
+          </div>
+          <div>
+            <div className="font-display text-2xl text-primary leading-none text-glow">
+              RUNPATH<span className="text-foreground"> PRO</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground tracking-wider">
+              IDF READINESS · TACTICAL FITNESS
+            </div>
+          </div>
+        </Link>
+        <div className="text-end">
+          <div className="font-display text-xl text-destructive leading-none tabular-nums">
+            {time}
+          </div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">{date}</div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+export function PageHeader({
+  title,
+  subtitle,
+  badge,
+}: {
+  title: string;
+  subtitle?: string;
+  badge?: string;
+}) {
+  return (
+    <div className="mb-4">
+      <div className="flex items-center gap-2 mb-1">
+        <h1 className="font-display text-3xl text-foreground">{title}</h1>
+        {badge && (
+          <Badge variant="outline" className="border-primary/40 text-primary bg-primary/10">
+            {badge}
+          </Badge>
+        )}
+      </div>
+      {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+    </div>
+  );
+}
