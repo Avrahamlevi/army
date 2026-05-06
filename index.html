@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>RUNPATH PRO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Heebo:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    :root{
+      --bg:#0b0c13; --card:#131525; --card2:#1b1f34; --border:#28304f;
+      --pri:#c8f135; --pri-fg:#0a0a12; --text:#eef1ff; --muted:#9ca5cc;
+      --danger:#ff4b6d; --ok:#3ddc97; --warn:#ffb020;
+      --r:14px;
+    }
+    body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+    .top{padding:12px 14px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .logo{font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:28px;color:var(--pri)}
+    .clock{font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:22px;color:var(--danger)}
+    .content{flex:1;overflow:auto;padding:12px}
+    .page{display:none}
+    .page.active{display:block}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px}
+    .title{font-size:14px;font-weight:900;color:var(--pri);margin-bottom:8px}
+    .sub{font-size:11px;color:var(--muted);margin-bottom:6px}
+    h3{font-size:16px;font-weight:900;margin-bottom:10px}
+    label{font-size:11px;color:var(--muted);display:block;margin-top:8px}
+    input,select,button,textarea{font-family:'Heebo',sans-serif}
+    input,select,textarea{width:100%;margin-top:4px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);padding:9px 10px;font-size:13px;outline:none}
+    input:focus,select:focus,textarea:focus{border-color:var(--pri)}
+    .btn{width:100%;margin-top:8px;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;background:var(--pri);color:var(--pri-fg)}
+    .btn.alt{background:#2a3252;color:var(--text)}
+    .btn.danger{background:var(--danger);color:#fff}
+    .btn.ok{background:var(--ok);color:#072414}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .tabs{display:flex;flex-wrap:wrap;gap:6px}
+    .tab{border:1px solid var(--border);background:var(--card2);color:var(--muted);padding:6px 10px;border-radius:9px;font-size:11px;cursor:pointer}
+    .tab.active{background:var(--pri);color:var(--pri-fg);border-color:var(--pri);font-weight:800}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+    .s{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:9px;text-align:center}
+    .sv{font-family:'Bebas Neue',cursive;font-size:30px;color:var(--pri);line-height:1}
+    .sl{font-size:10px;color:var(--muted)}
+    #map{height:300px;border-radius:12px;border:1px solid var(--border);overflow:hidden}
+    .mini{font-size:11px;color:var(--muted)}
+    .wk{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:7px}
+    .wk strong{color:var(--pri)}
+    .list-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:9px;margin-bottom:6px;font-size:12px}
+    .kpi{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px}
+    .bottom{background:var(--card);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);padding:8px 0}
+    .nav{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer}
+    .nav.active{color:var(--pri);font-weight:800}
+    .badge{display:inline-block;background:#2a3252;color:#cfd6ff;border-radius:999px;padding:2px 8px;font-size:10px}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="logo">RUNPATH PRO</div>
+    <div class="clock" id="clock">00:00:00</div>
+  </div>
+
+  <div class="content">
+    <div class="page active" id="p-train">
+      <h3>💪 תוכנית כוח חכמה</h3>
+      <div class="card">
+        <div class="title">בניית תוכניות אימון</div>
+        <div class="row">
+          <div><label>סביבה</label><select id="str-env"><option value="home">בית</option><option value="gym">חדר כושר</option></select></div>
+          <div><label>אימונים בשבוע</label><select id="str-tpw"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+        </div>
+        <div class="row">
+          <div><label>מספר שבועות</label><select id="str-weeks"><option>4</option><option>6</option><option>8</option><option>10</option><option>12</option><option>16</option><option>20</option><option>24</option></select></div>
+          <div>
+            <label>פוקוס כוח</label>
+            <select id="str-focus">
+              <option value="full">Full Body</option>
+              <option value="legs">רגליים</option>
+              <option value="back">גב</option>
+              <option value="chest">חזה</option>
+              <option value="shoulders">כתפיים</option>
+              <option value="biceps">יד קדמית (בייספס)</option>
+              <option value="triceps">יד אחורית (טרייספס)</option>
+              <option value="forearms">אמות</option>
+              <option value="core">בטן/ליבה</option>
+              <option value="upper">פלג גוף עליון</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>מטרת ריצה (משולב כוח לרצים)</label>
+            <select id="str-run-goal">
+              <option value="none">ללא מטרה ספציפית</option>
+              <option value="5k">5 ק"מ</option>
+              <option value="10k">10 ק"מ</option>
+              <option value="21k">חצי מרתון</option>
+              <option value="42k">מרתון</option>
+              <option value="bar_or">בר-אור</option>
+            </select>
+          </div>
+          <div>
+            <label>רמת עומס</label>
+            <select id="str-intensity">
+              <option value="easy">מתון</option>
+              <option value="mid" selected>בינוני</option>
+              <option value="hard">גבוה</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" onclick="buildStrengthPlan()">צור תוכנית כוח מפורטת</button>
+        <button class="btn alt" onclick="saveStrengthPlanToLibrary()">הוסף לרשימת האימונים</button>
+      </div>
+      <div id="strength-plan"></div>
+      <div class="card">
+        <div class="title">🏃 תוכנית ריצה נפרדת לפי מטרה</div>
+        <div class="row">
+          <div>
+            <label>מטרת מרחק (ק"מ)</label>
+            <select id="run-goal-km">
+              <option value="3">3</option>
+              <option value="5" selected>5</option>
+              <option value="10">10</option>
+              <option value="21">21.1 (חצי מרתון)</option>
+              <option value="42">42.2 (מרתון)</option>
+            </select>
+          </div>
+          <div>
+            <label>רמת כושר (1-10)</label>
+            <input id="run-fit-level" type="number" min="1" max="10" value="5" />
+          </div>
+        </div>
+        <div class="row">
+          <div><label>אימוני ריצה בשבוע</label><select id="run-tpw"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></div>
+          <div><label>מספר שבועות</label><select id="run-weeks"><option>4</option><option>6</option><option>8</option><option selected>10</option><option>12</option><option>16</option><option>20</option></select></div>
+        </div>
+        <button class="btn" onclick="buildRunningPlan()">צור תוכנית ריצה מפורטת</button>
+      </div>
+      <div id="running-plan"></div>
+    </div>
+
+    <div class="page" id="p-idf">
+      <h3>⚔ תוכנית צה"ל שבועית מפורטת</h3>
+      <div class="card">
+        <div class="title">הכנה לפי תאריך יעד</div>
+        <div class="row">
+          <div><label>סוג אירוע</label><select id="idf-type"><option value="bar_or">בר-אור</option><option value="say">יום סיירות</option><option value="gib">גיבוש</option></select></div>
+          <div><label>תאריך אירוע</label><input id="idf-date" type="date" /></div>
+        </div>
+        <div class="row">
+          <div><label>אימונים בשבוע</label><select id="idf-tpw"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+          <div><label>רמת כושר (1-10)</label><input id="idf-fit" type="number" min="1" max="10" value="5" /></div>
+        </div>
+        <button class="btn" onclick="buildIdfWeeklyPlan()">בנה תוכנית שבוע-שבוע</button>
+      </div>
+      <div id="idf-plan"></div>
+    </div>
+
+    <div class="page" id="p-run">
+      <h3>🏃 ריצה חיה + מפה + תכנון מסלול</h3>
+      <div class="stats">
+        <div class="s"><div class="sv" id="v-time">00:00:00</div><div class="sl">זמן</div></div>
+        <div class="s"><div class="sv" id="v-dist">0.00</div><div class="sl">ק"מ</div></div>
+        <div class="s"><div class="sv" id="v-pace">--:--</div><div class="sl">דק'/ק"מ</div></div>
+        <div class="s"><div class="sv" id="v-cals">0</div><div class="sl">קלוריות</div></div>
+        <div class="s"><div class="sv" id="v-up">0</div><div class="sl">עליות מ'</div></div>
+        <div class="s"><div class="sv" id="v-down">0</div><div class="sl">ירידות מ'</div></div>
+      </div>
+      <div id="map"></div>
+      <div class="mini" style="margin-top:6px">לחץ על המפה להוספת נקודות תכנון מסלול. אפשר לנקות/לתכנן/לשמור.</div>
+      <div class="card" style="margin-top:8px">
+        <div class="title">תכנון מסלול לפי מקומות שאתה כותב</div>
+        <div class="row">
+          <input id="route-place-input" type="text" placeholder="למשל: דיזנגוף סנטר תל אביב" />
+          <button class="btn" style="margin-top:0" onclick="searchAndAddPlace()">חפש והוסף נקודה</button>
+        </div>
+        <div class="row">
+          <div>
+            <label>נקודות חובה במסלול</label>
+            <select id="route-poi-need">
+              <option value="none">ללא חובה</option>
+              <option value="drinking_water">ברזייה</option>
+              <option value="toilets">שירותים</option>
+              <option value="shelter">מקלט</option>
+              <option value="all">ברזייה + שירותים + מקלט</option>
+            </select>
+          </div>
+          <div>
+            <label>הצעות ריצה באזור</label>
+            <button class="btn alt" style="margin-top:4px" onclick="suggestRunSpotsNearby()">הצע לי מקומות ריצה קרובים</button>
+          </div>
+        </div>
+        <div id="route-suggest-log" class="mini" style="margin-top:6px"></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ok" onclick="startRun()">התחל</button>
+        <button class="btn alt" onclick="pauseRun()">השהה (שירותים/עצירה)</button>
+      </div>
+      <div class="row">
+        <button class="btn alt" onclick="resumeRun()">המשך</button>
+        <button class="btn danger" onclick="finishRun()">סיים ושמור ריצה</button>
+      </div>
+      <div class="row">
+        <button class="btn alt" onclick="planRouteFromPoints()">תכנן מסלול לפי נקודות</button>
+        <button class="btn alt" onclick="clearRoutePlan()">נקה מסלול מתוכנן</button>
+      </div>
+      <div id="run-note" class="mini" style="margin-top:8px"></div>
+    </div>
+
+    <div class="page" id="p-history">
+      <h3>📚 היסטוריה</h3>
+      <div class="tabs" id="history-tabs" style="margin-bottom:8px">
+        <button class="tab active" data-tab="hist-main" onclick="setHistoryTab('hist-main', this)">היסטוריית ריצות + כוח</button>
+        <button class="tab" data-tab="hist-tests" onclick="setHistoryTab('hist-tests', this)">בדיקות שיפור</button>
+      </div>
+      <div id="hist-main">
+      <div class="card">
+        <div class="title">היסטוריית ריצות</div>
+        <div id="run-history"></div>
+      </div>
+      <div class="card">
+        <div class="title">היסטוריית אימוני כוח</div>
+        <div id="strength-history"></div>
+      </div>
+      </div>
+      <div id="hist-tests" style="display:none">
+      <div class="card">
+        <div class="title">🗓 בדיקות תקופתיות אוטומטיות</div>
+        <div class="mini">המערכת בונה לך לוח מבחנים חודשי כדי לראות שיפור אמיתי בכל התחומים.</div>
+        <div class="row" style="margin-top:8px">
+          <div>
+            <label>תדירות בדיקות</label>
+            <select id="test-frequency">
+              <option value="2">כל שבועיים</option>
+              <option value="4" selected>כל 4 שבועות</option>
+              <option value="6">כל 6 שבועות</option>
+            </select>
+          </div>
+          <div>
+            <label>מספר מחזורים קדימה</label>
+            <select id="test-cycles">
+              <option>3</option><option selected>6</option><option>9</option><option>12</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" onclick="buildPeriodicTests()">בנה לוח מבחני התקדמות</button>
+        <div id="periodic-tests-log" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <div class="title">📈 מעקב התקדמות חודשי (ריצה + כוח + צבא)</div>
+        <div class="mini">פעם בחודש בצע מבחן התקדמות והשווה לחודש הקודם.</div>
+        <div class="row" style="margin-top:8px">
+          <div><label>תוצאת ריצה חודשית (דקות 5K/3K)</label><input id="monthly-run-score" type="number" placeholder="למשל 24.5" /></div>
+          <div><label>תוצאת כוח חודשית (ניקוד/חזרות)</label><input id="monthly-strength-score" type="number" placeholder="למשל 160" /></div>
+        </div>
+        <div class="row">
+          <div><label>תוצאת צבא חודשית (ניקוד)</label><input id="monthly-idf-score" type="number" placeholder="למשל 72" /></div>
+          <div><label>הערות חודש</label><input id="monthly-notes" type="text" placeholder="תחושה, פציעות, עומס..." /></div>
+        </div>
+        <div class="row">
+          <button class="btn" onclick="saveMonthlyProgress()">שמור בדיקת התקדמות חודשית</button>
+          <button class="btn alt" onclick="renderMonthlyProgress()">רענן דוח התקדמות</button>
+        </div>
+        <div id="monthly-progress-log" style="margin-top:8px"></div>
+      </div>
+      </div>
+    </div>
+
+    <div class="page" id="p-profile">
+      <h3>👤 פרופיל + AI Coach</h3>
+      <div class="card">
+        <div class="row">
+          <div><label>גיל</label><input id="age" type="number" value="22" /></div>
+          <div><label>משקל (ק"ג)</label><input id="weight" type="number" value="75" /></div>
+        </div>
+        <div class="row">
+          <div>
+            <label>ספק AI</label>
+            <select id="ai-provider">
+              <option value="openrouter" selected>OpenRouter (מומלץ)</option>
+              <option value="anthropic">Anthropic</option>
+            </select>
+          </div>
+          <div>
+            <label>API Key</label>
+            <input id="api-key" type="password" placeholder="sk-or-v1... או sk-ant-..." />
+          </div>
+        </div>
+        <button class="btn alt" onclick="saveApiKey()">שמור מפתח</button>
+      </div>
+      <div class="card">
+        <div class="title">🤖 מאמן AI אישי</div>
+        <div id="ai-log" style="max-height:240px;overflow:auto"></div>
+        <div class="row" style="margin-top:8px">
+          <input id="ai-q" type="text" placeholder="מה להתאמן החודש?" />
+          <button class="btn" style="margin-top:0" onclick="askCoach()">שלח</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">💾 גיבוי / שחזור כל הנתונים</div>
+        <div class="mini">שומר הכל: ריצות, כוח, התקדמות חודשית, תוכניות והגדרות.</div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn alt" onclick="exportAllData()">ייצוא גיבוי JSON</button>
+          <button class="btn alt" onclick="document.getElementById('import-file').click()">ייבוא גיבוי JSON</button>
+        </div>
+        <input id="import-file" type="file" accept="application/json" style="display:none" onchange="importAllData(event)" />
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom">
+    <button class="nav active" id="n-train" onclick="showPage('train')">כוח</button>
+    <button class="nav" id="n-idf" onclick="showPage('idf')">צה"ל</button>
+    <button class="nav" id="n-run" onclick="showPage('run')">ריצה</button>
+    <button class="nav" id="n-history" onclick="showPage('history')">היסטוריה</button>
+    <button class="nav" id="n-profile" onclick="showPage('profile')">פרופיל</button>
+  </nav>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ===== Clock =====
+    setInterval(() => {
+      const d = new Date();
+      document.getElementById("clock").textContent =
+        String(d.getHours()).padStart(2, "0") + ":" +
+        String(d.getMinutes()).padStart(2, "0") + ":" +
+        String(d.getSeconds()).padStart(2, "0");
+    }, 1000);
+
+    // ===== Page Nav =====
+    function showPage(name){
+      ["train","idf","run","history","profile"].forEach(p=>{
+        document.getElementById("p-"+p).classList.toggle("active", p === name);
+        document.getElementById("n-"+p).classList.toggle("active", p === name);
+      });
+      if(name === "history") renderHistory();
+      if(name === "run") setTimeout(() => map.invalidateSize(), 100);
+    }
+
+    function setHistoryTab(tab, el){
+      document.querySelectorAll("#history-tabs .tab").forEach(t => t.classList.remove("active"));
+      if(el) el.classList.add("active");
+      document.getElementById("hist-main").style.display = tab === "hist-main" ? "block" : "none";
+      document.getElementById("hist-tests").style.display = tab === "hist-tests" ? "block" : "none";
+    }
+
+    // ===== Storage =====
+    const KEY_RUNS = "runpath_pro_runs";
+    const KEY_STR = "runpath_pro_strength";
+    const KEY_STR_LIBRARY = "runpath_pro_strength_library";
+    const KEY_MONTHLY = "runpath_pro_monthly_progress";
+    const KEY_PERIODIC_TESTS = "runpath_pro_periodic_tests";
+    const KEY_API = "runpath_pro_api_key";
+    const KEY_AI_PROVIDER = "runpath_pro_ai_provider";
+
+    function loadJson(key, fallback){
+      try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+      catch { return fallback; }
+    }
+    function saveJson(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+    const STRENGTH_SPLITS = {
+      back: ["Deadlift", "Bent Over Row", "Lat Pulldown", "Seated Cable Row", "Pull-up", "Face Pull", "T-bar Row", "Back Extension"],
+      chest: ["Bench Press", "Incline Bench Press", "Dumbbell Bench Press", "Machine Chest Press", "Cable Fly", "Dips", "Push-up Explosive"],
+      shoulders: ["Overhead Press", "Push Press", "Arnold Press", "Lateral Raise", "Rear Delt Fly", "Landmine Press", "Plate Front Raise"],
+      biceps: ["Biceps Curl", "Hammer Curl", "Incline Curl", "Preacher Curl", "Cable Curl", "Chin-up"],
+      triceps: ["Triceps Rope Pushdown", "Skull Crusher", "Overhead Triceps Extension", "Bench Dip", "Close Grip Push-up", "Dips"],
+      forearms: ["Farmer Carry", "Suitcase Carry", "Dead Hang", "Wrist Curl", "Reverse Wrist Curl", "Plate Pinch Hold"],
+      core: ["Plank קדמי", "פלאנק צד", "Dead Bug", "Hollow Hold", "Ab Wheel", "Hanging Leg Raise", "Cable Pallof Press", "Wood Chopper"],
+      upper: ["Bench Press", "Bent Over Row", "Overhead Press", "Lat Pulldown", "Dips", "Face Pull", "Biceps Curl", "Triceps Rope Pushdown"]
+    };
+
+    const EXERCISE_EXECUTION_TIPS = {
+      "Deadlift": "גב ניטרלי, המוט צמוד לרגל, דחיפה מהרצפה עם הרגליים.",
+      "Bench Press": "שכמות אסופות, הורדה מבוקרת לחזה ועלייה בקו ישר.",
+      "Overhead Press": "בטן וישבן נעולים, המוט עובר קרוב לפנים עד נעילה.",
+      "Squat": "ברכיים בכיוון האצבעות, ירידה נשלטת ועלייה חזקה.",
+      "RDL": "ציר ירך לאחור, גב ישר, עצירה במתיחה בירך אחורית.",
+      "Lat Pulldown": "מרפקים למטה-אחור, חזה פתוח, בלי משיכה מהצוואר.",
+      "Seated Cable Row": "גב ניטרלי, משיכה עם מרפקים, עצירה בכיווץ.",
+      "Pull-up": "טווח מלא, שליטה בירידה, עליה עד סנטר מעל המוט.",
+      "Dips": "כתפיים אחורה, ירידה עד 90 מעלות, עליה יציבה.",
+      "Biceps Curl": "מרפקים צמודים, ללא תנופה, ירידה איטית.",
+      "Triceps Rope Pushdown": "מרפקים מקובעים לצדדים, פתיחה מלאה למטה.",
+      "Lateral Raise": "הרמה עד גובה כתף בלי תנופה מהגב.",
+      "Ab Wheel": "ליבה נעולה, גב ניטרלי, טווח שאתה שולט בו.",
+      "Farmer Carry": "כתפיים מטה-אחור, צעדים יציבים, בלי הטיה לצד.",
+      "default": "שמור טכניקה נקייה, טווח תנועה מלא, וסיים 1-2 חזרות לפני כשל."
+    };
+
+    function getExecutionTip(name){
+      const exact = EXERCISE_EXECUTION_TIPS[name];
+      if(exact) return exact;
+      const key = Object.keys(EXERCISE_EXECUTION_TIPS).find(k => k !== "default" && name.includes(k));
+      return key ? EXERCISE_EXECUTION_TIPS[key] : EXERCISE_EXECUTION_TIPS.default;
+    }
+
+    function getStrengthExercisePool(env, focus){
+      if(STRENGTH_SPLITS[focus]) return STRENGTH_SPLITS[focus];
+      return EXTENDED_EXERCISE_LIBRARY[env][focus] || EXTENDED_EXERCISE_LIBRARY[env].full;
+    }
+
+    function buildStructuredSession(exList, week, day, goal, intensity){
+      const mainRepByIntensity = { easy: "10-12", mid: "8-10", hard: "5-8" };
+      const assistRepByIntensity = { easy: "12-15", mid: "10-12", hard: "8-10" };
+      const runSpecific = {
+        none: ["Core Anti Rotation", "Calf Iso Hold", "Hip Airplane"],
+        "5k": ["Box Jump", "Calf Raise Standing", "Split Squat"],
+        "10k": ["RDL", "Step Up", "Tibialis Raise"],
+        "21k": ["Single Leg RDL", "Hip Thrust", "Soleus Raises"],
+        "42k": ["Single Leg Press", "Hamstring Curl", "Core Anti Rotation Hold"],
+        bar_or: ["Pull-up", "Push Press", "Walking Lunge"]
+      };
+      const i1 = (week * 3 + day * 2) % exList.length;
+      const i2 = (week * 5 + day * 3) % exList.length;
+      const i3 = (week * 7 + day * 4) % exList.length;
+      const i4 = (week * 11 + day * 3) % exList.length;
+      const bonus = runSpecific[goal] || runSpecific.none;
+      const b = bonus[(week + day) % bonus.length];
+      return [
+        { block: "חימום", text: "10-12 דק מוביליטי + הפעלה" },
+        { block: "תרגיל מרכזי A", text: `${exList[i1]} | 4-5 סטים × ${mainRepByIntensity[intensity]} | ביצוע: ${getExecutionTip(exList[i1])}` },
+        { block: "תרגיל מרכזי B", text: `${exList[i2]} | 4 סטים × ${mainRepByIntensity[intensity]} | ביצוע: ${getExecutionTip(exList[i2])}` },
+        { block: "אביזרים", text: `${exList[i3]} + ${exList[i4]} | 3 סטים × ${assistRepByIntensity[intensity]} | ביצוע: ${getExecutionTip(exList[i3])}` },
+        { block: "רץ-ספציפי", text: `${b} | 3 סטים איכות | דגש: שליטה חד-רגלית, קרסול וליבה` },
+        { block: "סיום", text: "5-8 דק שחרור + נשימה" }
+      ];
+    }
+
+    // ===== Extended Libraries (Pro Max) =====
+    const EXTENDED_EXERCISE_LIBRARY = {
+      home: {
+        full: [
+          "שכיבות סמיכה רגילות",
+          "שכיבות סמיכה רחבות",
+          "שכיבות סמיכה יהלום",
+          "שכיבות סמיכה עם רגליים מוגבהות",
+          "שכיבות סמיכה יד אחת (שלב לימוד)",
+          "שכיבות סמיכה קצב איטי 4-1-1",
+          "סקוואט משקל גוף",
+          "סקוואט עצירה בתחתית",
+          "סקוואט קפיצה",
+          "סקוואט פיצול",
+          "לאנג' קדמי",
+          "לאנג' אחורי",
+          "לאנג' הליכה",
+          "לאנג' צידי",
+          "Bulgarian Split Squat",
+          "Hip Hinge עם תיק גב",
+          "Good Morning עם תיק",
+          "Hip Bridge",
+          "Glute Bridge חד רגל",
+          "Hamstring Slide עם מגבת",
+          "Wall Sit",
+          "Calf Raises איטי",
+          "Calf Raises חד רגל",
+          "Step Up על ספסל",
+          "Step Down בשליטה",
+          "פלאנק קדמי",
+          "פלאנק צד",
+          "פלאנק כתף-כתף",
+          "פלאנק עם הרמת רגל",
+          "Dead Bug",
+          "Bird Dog",
+          "Hollow Hold",
+          "Russian Twist",
+          "V Sit",
+          "Mountain Climbers",
+          "Bear Crawl",
+          "Inchworm",
+          "Burpees",
+          "High Knees",
+          "Skaters",
+          "Jumping Jacks",
+          "Boxer Shuffle",
+          "Lateral Shuffle",
+          "Shadow Boxing",
+          "Sit Through",
+          "Sprawl",
+          "Superman Hold",
+          "Y-T-W ללא משקל",
+          "Reverse Snow Angels",
+          "Door Row עם מגבת",
+          "Isometric Row with Towel",
+          "Isometric Chest Squeeze",
+          "Isometric Squat Hold",
+          "Hip Airplane",
+          "Cossack Squat",
+          "Deep Squat Mobility Hold",
+          "Thoracic Rotation",
+          "Scapular Push-up",
+          "Shoulder Tap Push-up",
+          "Tempo Burpee 3-0-1",
+          "Power Knees",
+          "Split Jump",
+          "Broad Jump",
+          "Single Leg Hop",
+          "Pogo Jumps",
+          "Ankling Drill",
+          "A-Skip במקום",
+          "B-Skip במקום",
+          "Wall March",
+          "Reverse Lunge to Knee Drive",
+          "Push-up to Down Dog",
+          "Pike Push-up",
+          "Handstand Hold Against Wall",
+          "Triceps Dips על כיסא",
+          "Bench Dip עצירה בתחתית",
+          "Farmer Carry עם שקיות",
+          "Suitcase Carry חד צד",
+          "Overhead Carry עם בקבוקים",
+          "March Carry",
+          "Front Rack Carry מאולתר",
+          "Glute Med Walk עם גומיה",
+          "Monster Walk עם גומיה",
+          "Clamshell עם גומיה",
+          "Fire Hydrant",
+          "Donkey Kick",
+          "Copenhagen Side Plank בסיסי",
+          "Nordic Eccentric עזרה",
+          "Wall Calf Iso Hold",
+          "Toe Raises לקדמת השוק",
+          "Tibialis Raise קיר",
+          "Soleus Raises כפוף ברך",
+          "Plank Reach",
+          "Plank Walk Out",
+          "Alternating V-Up",
+          "Flutter Kicks",
+          "Leg Raises",
+          "Reverse Crunch"
+        ],
+        legs: [
+          "סקוואט משקל גוף",
+          "סקוואט פיצול",
+          "לאנג' קדמי",
+          "לאנג' אחורי",
+          "Bulgarian Split Squat",
+          "Wall Sit",
+          "Glute Bridge",
+          "Glute Bridge חד רגל",
+          "Hamstring Slide",
+          "Calf Raises",
+          "Tibialis Raise",
+          "Soleus Raise",
+          "Step Up",
+          "Step Down",
+          "Broad Jump",
+          "Pogo Jumps",
+          "Single Leg Hop",
+          "Cossack Squat",
+          "Hip Airplane",
+          "Reverse Lunge to Knee Drive",
+          "Lateral Lunge",
+          "Curtsy Lunge",
+          "Skater Jump",
+          "Squat Hold 45 שנ'",
+          "Tempo Squat 4-2-1",
+          "Tempo Lunge 3-1-1",
+          "Hip Thrust על ספה",
+          "Heel Elevated Squat",
+          "Split Squat Pulses",
+          "Calf Iso Hold"
+        ],
+        upper: [
+          "שכיבות סמיכה רגילות",
+          "שכיבות סמיכה רחבות",
+          "שכיבות יהלום",
+          "Pike Push-up",
+          "Triceps Dip",
+          "Door Towel Row",
+          "Reverse Snow Angels",
+          "Scapular Push-up",
+          "Handstand Hold Wall",
+          "Shoulder Tap Push-up",
+          "Isometric Row",
+          "Isometric Chest Press",
+          "Superman Hold",
+          "Y-T-W",
+          "Plank Shoulder Tap",
+          "Farmer Carry",
+          "Suitcase Carry",
+          "Overhead Carry",
+          "Push-up Slow Tempo",
+          "Push-up Explosive"
+        ]
+      },
+      gym: {
+        full: [
+          "Back Squat",
+          "Front Squat",
+          "Deadlift קלאסי",
+          "Romanian Deadlift",
+          "Trap Bar Deadlift",
+          "Bench Press",
+          "Incline Bench Press",
+          "Dumbbell Bench Press",
+          "Overhead Press",
+          "Push Press",
+          "Bent Over Row",
+          "Chest Supported Row",
+          "Lat Pulldown",
+          "Pull-up",
+          "Weighted Pull-up",
+          "Seated Cable Row",
+          "Dips",
+          "Machine Chest Press",
+          "Leg Press",
+          "Hack Squat",
+          "Bulgarian Split Squat",
+          "Walking Lunges DB",
+          "Step Up DB",
+          "Calf Raise Standing",
+          "Calf Raise Seated",
+          "Hip Thrust",
+          "Glute Ham Raise",
+          "Hamstring Curl",
+          "Leg Extension",
+          "Cable Pallof Press",
+          "Ab Wheel",
+          "Hanging Leg Raise",
+          "Cable Crunch",
+          "Wood Chopper",
+          "Face Pull",
+          "Rear Delt Fly",
+          "Lateral Raise",
+          "Biceps Curl",
+          "Hammer Curl",
+          "Triceps Rope Pushdown",
+          "Skull Crusher",
+          "Farmer Walk Heavy",
+          "Sled Push",
+          "Sled Pull",
+          "Kettlebell Swing",
+          "Thruster",
+          "Goblet Squat",
+          "Landmine Press",
+          "Landmine Squat",
+          "Single Leg RDL",
+          "Cable Kickback",
+          "Adductor Machine",
+          "Abductor Machine",
+          "Reverse Hyper",
+          "Back Extension",
+          "Nordic Curl",
+          "Barbell Hip Thrust",
+          "Pause Squat",
+          "Tempo Bench",
+          "Deficit Deadlift",
+          "Box Squat",
+          "Pin Press",
+          "T-bar Row",
+          "Meadows Row",
+          "Arnold Press",
+          "Machine Row",
+          "Smith Squat",
+          "Smith Lunge",
+          "Smith RDL",
+          "Cable Lateral Raise",
+          "Cable Curl",
+          "Overhead Triceps Extension",
+          "Plate Front Raise",
+          "Shrugs",
+          "Incline DB Row",
+          "Seal Row",
+          "Pullover Cable",
+          "Machine Pullover",
+          "Reverse Pec Deck",
+          "Hip Airplane Assisted",
+          "Box Jump",
+          "Depth Jump",
+          "Med Ball Slam",
+          "Battle Rope",
+          "Assault Bike Sprint",
+          "Row Erg Sprint",
+          "Ski Erg Sprint",
+          "Stairmaster Intervals",
+          "Treadmill Hill Repeats",
+          "Incline Walk Weighted",
+          "Sandbag Carry",
+          "Front Rack Carry",
+          "Overhead Carry KB",
+          "Suitcase Carry KB",
+          "Yoke Walk",
+          "Core Anti Rotation Hold"
+        ],
+        legs: [
+          "Back Squat",
+          "Front Squat",
+          "Hack Squat",
+          "Leg Press",
+          "Split Squat",
+          "Bulgarian Split Squat",
+          "RDL",
+          "Deadlift",
+          "Hip Thrust",
+          "Hamstring Curl",
+          "Leg Extension",
+          "Calf Raise Standing",
+          "Calf Raise Seated",
+          "Tibialis Machine",
+          "Adductor Machine",
+          "Abductor Machine",
+          "Step Up",
+          "Walking Lunge",
+          "Reverse Lunge",
+          "Box Jump",
+          "Sled Push",
+          "Sled Pull",
+          "Nordic Curl",
+          "Glute Ham Raise",
+          "Single Leg Press",
+          "Single Leg RDL",
+          "Pistol Box Squat",
+          "Pause Squat",
+          "Tempo Squat",
+          "Banded Hip Thrust"
+        ],
+        upper: [
+          "Bench Press",
+          "Incline Bench",
+          "DB Press",
+          "OHP",
+          "Push Press",
+          "Cable Fly",
+          "Dips",
+          "T-bar Row",
+          "Lat Pulldown",
+          "Pull-up",
+          "Seated Row",
+          "Face Pull",
+          "Rear Delt Fly",
+          "Lateral Raise",
+          "Biceps Curl",
+          "Hammer Curl",
+          "Triceps Pushdown",
+          "Skull Crusher",
+          "Arnold Press",
+          "Landmine Press",
+          "Machine Chest Press",
+          "Machine Row",
+          "Incline Curl",
+          "Preacher Curl",
+          "Overhead Triceps Extension"
+        ]
+      }
+    };
+
+    const RUN_WORKOUT_LIBRARY = [
+      "Easy 30 דק",
+      "Easy 40 דק",
+      "Easy 50 דק",
+      "Long 8 ק\"מ",
+      "Long 10 ק\"מ",
+      "Long 12 ק\"מ",
+      "Long 14 ק\"מ",
+      "Long 16 ק\"מ",
+      "Tempo 2x10 דק",
+      "Tempo 3x8 דק",
+      "Tempo 20 דק רציף",
+      "Tempo 30 דק רציף",
+      "Interval 8x400",
+      "Interval 10x400",
+      "Interval 6x800",
+      "Interval 5x1000",
+      "Interval 4x1200",
+      "Hill 8x30שנ",
+      "Hill 10x45שנ",
+      "Hill 12x60שנ",
+      "Fartlek 1/2",
+      "Fartlek 2/2",
+      "Fartlek גלים",
+      "Recovery 25 דק",
+      "Recovery 35 דק",
+      "Strides 8x20שנ",
+      "Strides 10x20שנ",
+      "Cadence Drill",
+      "Form Drill",
+      "Ruck 20 דק 8קג",
+      "Ruck 35 דק 10קג",
+      "Ruck 50 דק 12קג",
+      "Ruck 70 דק 15קג",
+      "2K Benchmark",
+      "3K Benchmark",
+      "5K Benchmark",
+      "10K Benchmark",
+      "Downhill Technique",
+      "Uphill Strength",
+      "Sand Run Intervals",
+      "Trail Technical",
+      "Trail Endurance",
+      "Treadmill Incline Build",
+      "Treadmill Pace Control",
+      "Sprint 10x100",
+      "Sprint 12x100",
+      "Sprint 8x200",
+      "Mixed 400/800",
+      "Mixed Tempo + Strides",
+      "Mixed Hill + Tempo",
+      "Mixed Long + Finish Fast"
+    ];
+
+    const COACHING_TIPS_LIBRARY = [
+      "שמור כלל 80/20: רוב הריצות קלות.",
+      "אל תעלה נפח שבועי ביותר מ-10%.",
+      "אם דופק בוקר עולה 8+ פעימות, הקל עומס.",
+      "יום מנוחה מלא לפחות פעם בשבוע.",
+      "עבודת כוח פעמיים בשבוע מפחיתה פציעות רצים.",
+      "הקפד על חימום 10-15 דקות לפני איכות.",
+      "הוסף 4-6 ספרינטים קצרים אחרי ריצה קלה.",
+      "נעלי ריצה: החלפה כל 600-800 ק\"מ.",
+      "באימוני עליות שמור צעדים קצרים ומהירים.",
+      "בירידות שמור תדירות גבוהה ובלימה מינימלית.",
+      "קלוריות הן הערכה - המגמה חשובה יותר מהמספר.",
+      "עקוב אחרי שינה, סטרס, כאב, ומצב רוח.",
+      "דלואד כל שבוע רביעי מומלץ.",
+      "לפני טסט חשוב - הורד עומס 48-72 שעות.",
+      "אל תנסה שיא אישי בכל אימון.",
+      "בגיבוש: התאמן גם על עייפות והחלטות תחת עומס.",
+      "באימון כוח איכות תנועה לפני משקל.",
+      "סיים אימון עם 5-10 דקות שחרור.",
+      "שתייה: 400-700 מ\"ל לשעה לפי מזג אוויר.",
+      "פחמימה לפני ריצה ארוכה משפרת ביצועים.",
+      "אחרי ריצה עצימה שלב חלבון + פחמימה.",
+      "שלב תרגילי קרסול וכף רגל למניעת שין-ספלינט.",
+      "כאבי עומס מתמשכים דורשים הורדת עומס חכמה.",
+      "תעד אימונים - מה שנמדד משתפר.",
+      "בדיקות תקופתיות כל 2-4 שבועות.",
+      "באימוני סף - נשימה קשה אך נשלטת.",
+      "אל תדלג על טכניקה: A-skip/B-skip ו-ankling.",
+      "ריצת שיקום אמורה להרגיש קלה באמת.",
+      "במהירות - איכות לפני כמות.",
+      "במסלול צבאי - תרגול משקל חשוב בהדרגה.",
+      "נפח גבוה ללא שינה = סיכון לפציעה.",
+      "בקיץ הורד קצבים לפי חום ולחות.",
+      "שלב אימוני ליבה אנטי-רוטציה.",
+      "בעליות: מבט 3-5 מטר קדימה.",
+      "בשבוע טייפר שומרים חדות ומפחיתים נפח.",
+      "חיזוק ירך אחורית קריטי לרצים מהירים.",
+      "שמור טווחי תנועה טובים באגן וקרסול.",
+      "אל תפתח צעד בכוח, דחיפה אחורה מספיקה.",
+      "תכנון מסלול מראש משפר התמדה.",
+      "עבודת נשימה בין אינטרוולים משפרת התאוששות.",
+      "במסלולי חול יש להאט ולהגדיל תדירות.",
+      "אם הקצב לא יציב - עבור לשליטת מאמץ (RPE).",
+      "ריצה לפי תחושה חשובה כמו לפי שעון.",
+      "היסטוריה אישית טובה מממוצעים כלליים.",
+      "תעד עליות וירידות בנפרד להבנת עומס שרירי.",
+      "גיוון משטחים מפחית שחיקת עומס.",
+      "ריצת בוקר עצימה דורשת ארוחת ערב מתאימה.",
+      "בחודש קשה הגדל צריכת חלבון.",
+      "להוריד עומס בזמן שווה ערך ללהתקדם בזמן.",
+      "התמדה מנצחת מוטיבציה רגעית."
+    ];
+
+    const MONTHLY_TEMPLATES = {
+      base: [
+        "שבוע 1: בסיס + טכניקה + כוח מתון",
+        "שבוע 2: העלאת נפח מבוקרת",
+        "שבוע 3: עצימות גבוהה + סימולציה",
+        "שבוע 4: דלואד + בדיקת התקדמות"
+      ],
+      race: [
+        "שבוע 1: בניית קצב מטרה",
+        "שבוע 2: נפח שיא מחזור",
+        "שבוע 3: חידוד מהירות",
+        "שבוע 4: טייפר + תחרות/טסט"
+      ],
+      idf: [
+        "שבוע 1: בסיס אירובי + כוח פונקציונלי",
+        "שבוע 2: ספרינטים + עליות + עומס ציוד",
+        "שבוע 3: סימולציה מלאה ותרחישי עייפות",
+        "שבוע 4: הורדת עומס ושמירת חדות"
+      ]
+    };
+
+    // ===== Strength Plan =====
+    let latestStrengthPlan = null;
+    function buildStrengthPlan(){
+      const env = document.getElementById("str-env").value;
+      const tpw = parseInt(document.getElementById("str-tpw").value, 10);
+      const weeks = parseInt(document.getElementById("str-weeks").value, 10);
+      const focus = document.getElementById("str-focus").value;
+      const runGoal = document.getElementById("str-run-goal").value;
+      const intensity = document.getElementById("str-intensity").value;
+      const ex = getStrengthExercisePool(env, focus);
+      let html = '<div class="card"><div class="title">תוכנית כוח שבועית</div>';
+      const sessions = [];
+      for(let w=1; w<=weeks; w++){
+        const deload = (w % 4 === 0);
+        const taper = runGoal !== "none" && w > weeks - 2;
+        html += `<div class="wk"><strong>שבוע ${w}</strong> <span class="badge">${taper ? "TAPER" : (deload ? "DELOAD" : "BUILD")}</span><br/>`;
+        if(w <= 4){
+          const templateType = runGoal === "none" ? "base" : "race";
+          const monthlyLine = MONTHLY_TEMPLATES[templateType][(w-1) % 4];
+          html += `<span class="mini">${monthlyLine}</span><br/>`;
+        }
+        for(let d=1; d<=tpw; d++){
+          const sessionBlocks = buildStructuredSession(ex, w, d, runGoal, intensity);
+          html += `<div class="list-item"><strong>אימון ${d}</strong><br/>`;
+          sessionBlocks.forEach(b => {
+            html += `${b.block}: ${b.text}<br/>`;
+          });
+          if(deload) html += `<span class="mini">שבוע דלואד: הפחת משקלים 20-30%</span><br/>`;
+          if(taper) html += `<span class="mini">שבוע חידוד לריצה: שומרים עצימות, חותכים נפח</span><br/>`;
+          html += `</div>`;
+          sessions.push({ week: w, day: d, blocks: sessionBlocks });
+        }
+        html += `<div class="mini">טיפ שבוע: ${COACHING_TIPS_LIBRARY[(w-1) % COACHING_TIPS_LIBRARY.length]}</div>`;
+        html += "</div>";
+      }
+      html += "</div>";
+      latestStrengthPlan = { createdAt: new Date().toISOString(), env, tpw, weeks, focus, runGoal, intensity, sessions };
+      document.getElementById("strength-plan").innerHTML = html;
+    }
+
+    function saveStrengthPlanToLibrary(){
+      if(!latestStrengthPlan){
+        alert("צור תוכנית כוח לפני שמירה.");
+        return;
+      }
+      const list = loadJson(KEY_STR_LIBRARY, []);
+      list.unshift(latestStrengthPlan);
+      saveJson(KEY_STR_LIBRARY, list.slice(0, 20));
+      const history = loadJson(KEY_STR, []);
+      history.unshift({
+        date: new Date().toLocaleString("he-IL"),
+        title: `תוכנית כוח ${latestStrengthPlan.weeks} שבועות`,
+        details: `${latestStrengthPlan.env} | ${latestStrengthPlan.tpw} אימונים/שבוע | פוקוס ${latestStrengthPlan.focus} | יעד ריצה ${latestStrengthPlan.runGoal}`
+      });
+      saveJson(KEY_STR, history.slice(0, 200));
+      alert("נשמר לרשימת אימוני כוח בהצלחה.");
+    }
+
+    function getPaceByFit(fit){
+      if(fit <= 3) return { easy: "7:00-8:00", tempo: "5:50-6:30", interval: "5:15-5:50", long: "7:30-8:30" };
+      if(fit <= 6) return { easy: "6:00-7:00", tempo: "5:00-5:40", interval: "4:30-5:00", long: "6:30-7:30" };
+      return { easy: "5:10-6:00", tempo: "4:20-5:00", interval: "3:55-4:30", long: "5:45-6:40" };
+    }
+
+    function runSessionTemplate(type, paces, goalKm){
+      const map = {
+        easy: {
+          title: "ריצה קלה",
+          details: `30-60 דק בקצב ${paces.easy}. ביצוע: נשימה נוחה, אפשר לדבר במשפטים שלמים, דופק אירובי.`,
+          warmup: "10 דק הליכה/ריצה קלה + מוביליטי ירך וקרסול",
+          cooldown: "5-10 דק ריצה קלה + מתיחות קלות"
+        },
+        interval: {
+          title: "אינטרוולים",
+          details: `8-12 חזרות קצרות בקצב ${paces.interval}. ביצוע: יציאה חזקה מבוקרת, התאוששות בין חזרות בהליכה/ג'וג.`,
+          warmup: "15 דק חימום + 4 האצות 60 מטר",
+          cooldown: "10 דק קל + נשימות איטיות"
+        },
+        tempo: {
+          title: "ריצת קצב (Tempo)",
+          details: `20-35 דק בקצב ${paces.tempo}. ביצוע: מאמץ קשה אך נשלט, שמירת קצב אחיד מתחילת הקטע ועד סופו.`,
+          warmup: "12 דק קל + תרגילי טכניקה",
+          cooldown: "8 דק קל + שחרור תאומים/ירך אחורית"
+        },
+        long: {
+          title: "ריצה ארוכה",
+          details: `מרחק ארוך בקצב ${paces.long}. ביצוע: פתיחה איטית, שתייה כל 20-30 דק, סיום חזק רק אם נשאר כוח.`,
+          warmup: "8-10 דק קל מאוד",
+          cooldown: "10 דק הליכה + מילוי נוזלים"
+        },
+        hill: {
+          title: "ריצת עליות",
+          details: "8-12 חזרות עלייה 30-75 שנ'. ביצוע: הטיה קלה קדימה, צעד קצר ומהיר, ירידה איטית בשליטה.",
+          warmup: "15 דק קל + drills",
+          cooldown: "10 דק קל + מתיחות ירך קדמית"
+        }
+      };
+      const base = map[type];
+      const goalText = `יעד: ${goalKm} ק"מ`;
+      return { ...base, goalText };
+    }
+
+    function buildRunningPlan(){
+      const goalKm = parseInt(document.getElementById("run-goal-km").value, 10);
+      const fit = parseInt(document.getElementById("run-fit-level").value, 10);
+      const tpw = parseInt(document.getElementById("run-tpw").value, 10);
+      const weeks = parseInt(document.getElementById("run-weeks").value, 10);
+      const paces = getPaceByFit(fit);
+      const weeklyTypesBase = goalKm >= 21 ? ["easy", "interval", "tempo", "easy", "long", "hill"] :
+                              goalKm >= 10 ? ["easy", "interval", "tempo", "long", "hill"] :
+                              ["easy", "interval", "tempo", "long"];
+      let html = `<div class="card"><div class="title">תוכנית ריצה ${weeks} שבועות ליעד ${goalKm} ק"מ</div>`;
+      for(let w = 1; w <= weeks; w++){
+        const deload = w % 4 === 0;
+        const taper = w > weeks - 2;
+        html += `<div class="wk"><strong>שבוע ${w}</strong> <span class="badge">${taper ? "TAPER" : (deload ? "DELOAD" : "BUILD")}</span><br/>`;
+        for(let d = 1; d <= tpw; d++){
+          const t = weeklyTypesBase[(w + d - 2) % weeklyTypesBase.length];
+          const plan = runSessionTemplate(t, paces, goalKm);
+          html += `<div class="list-item"><strong>אימון ${d}: ${plan.title}</strong><br/>`;
+          html += `• ${plan.goalText}<br/>`;
+          html += `• חימום: ${plan.warmup}<br/>`;
+          html += `• עיקרי: ${plan.details}<br/>`;
+          if(deload) html += `• שבוע דלואד: הורד נפח אימון ב-20-30%.<br/>`;
+          if(taper) html += `• שבוע חידוד: שמור עצימות אך קצר נפח כולל.<br/>`;
+          html += `• קירור: ${plan.cooldown}</div>`;
+        }
+        html += `<div class="mini">בדיקת התקדמות שבועית: זמן ריצה 2-3 ק"מ או קטע Tempo של 20 דק.</div>`;
+        html += `</div>`;
+      }
+      html += "</div>";
+      document.getElementById("running-plan").innerHTML = html;
+    }
+
+    // ===== IDF Weekly Plan =====
+    function buildIdfWeeklyPlan(){
+      const type = document.getElementById("idf-type").value;
+      const dateVal = document.getElementById("idf-date").value;
+      const tpw = parseInt(document.getElementById("idf-tpw").value, 10);
+      const fit = parseInt(document.getElementById("idf-fit").value, 10);
+      if(!dateVal){ alert("נא לבחור תאריך יעד."); return; }
+      const now = new Date(); now.setHours(0,0,0,0);
+      const target = new Date(dateVal); target.setHours(0,0,0,0);
+      const days = Math.ceil((target - now) / 86400000);
+      if(days < 7){ alert("צריך לפחות שבוע אחד לתוכנית."); return; }
+      const weeks = Math.floor(days / 7);
+      const easyPace = fit <= 3 ? "7:00-8:00" : fit <= 6 ? "6:00-7:00" : "5:00-6:00";
+      const hardPace = fit <= 3 ? "5:30-6:15" : fit <= 6 ? "4:45-5:30" : "4:00-4:45";
+      let html = `<div class="card"><div class="title">תוכנית שבועית ל-${weeks} שבועות</div><div class="sub">כל שבוע מפורט לפי אימונים, עומס, ושבוע דלואד.</div>`;
+      for(let w=1; w<=weeks; w++){
+        const deload = w % 4 === 0;
+        const taper = w > weeks - 2;
+        const longKm = Math.max(3, Math.round((fit + w) * 0.9));
+        const loadTag = taper ? "TAPER" : deload ? "DELOAD" : "BUILD";
+        html += `<div class="wk"><strong>שבוע ${w}</strong> <span class="badge">${loadTag}</span><br/>`;
+        for(let d=1; d<=tpw; d++){
+          let s = "";
+          if(type === "bar_or"){
+            s = d === 1 ? `ריצה קלה 30-45 דק קצב ${easyPace}` :
+                d === 2 ? `אינטרוולים 6x400 קצב ${hardPace}` :
+                `טסט/טמפו 2-3 ק"מ + כוח פונקציונלי`;
+          } else if(type === "say"){
+            s = d === 1 ? `ריצת 2000מ x ${Math.min(4, 1 + Math.floor(w/2))}` :
+                d === 2 ? `עליות 8-12 חזרות + ספרינטים קצרים` :
+                `ריצה עם משקל 8-16 ק"ג + כוח מתפרץ`;
+          } else {
+            s = d === 1 ? `Ruck ${Math.min(8 + w, 20)} ק"ג 40-90 דק` :
+                d === 2 ? `קומבו כוח: שכיבות/מתח/סקוואט/בטן 4-6 סבבים` :
+                `ריצת נפח ${longKm} ק"מ קצב ${easyPace}`;
+          }
+          if(deload) s += " (הפחתה ~25% עומס)";
+          if(taper) s += " (עצימות קצרה, שמירת חדות)";
+          html += `אימון ${d}: ${s}<br/>`;
+        }
+        html += "</div>";
+      }
+      html += "</div>";
+      document.getElementById("idf-plan").innerHTML = html;
+    }
+
+    // ===== Map + Run Tracking =====
+    const map = L.map("map");
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+    map.setView([32.0853, 34.7818], 13);
+
+    let runPath = [];
+    let runPolyline = L.polyline([], { color: "#c8f135", weight: 4 }).addTo(map);
+    let plannedPoints = [];
+    let plannedMarkers = [];
+    let suggestedMarkers = [];
+    let plannedLine = L.polyline([], { color: "#3da5ff", weight: 4, dashArray: "8,8" }).addTo(map);
+    let watchId = null;
+    let timerId = null;
+    let running = false;
+    let paused = false;
+    let startTs = null;
+    let elapsedMs = 0;
+    let lastPos = null;
+    let distanceM = 0;
+    let elevUp = 0;
+    let elevDown = 0;
+    let userMarker = null;
+
+    map.on("click", (e)=>{
+      plannedPoints.push([e.latlng.lat, e.latlng.lng]);
+      const mk = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+      plannedMarkers.push(mk);
+      plannedLine.setLatLngs(plannedPoints);
+      setRunNote(`נוספה נקודת תכנון (${plannedPoints.length}).`);
+    });
+
+    function setRunNote(msg){ document.getElementById("run-note").textContent = msg; }
+    function setSuggestLog(msg){ document.getElementById("route-suggest-log").textContent = msg; }
+    function nowElapsedSec(){
+      if(!startTs) return Math.floor(elapsedMs/1000);
+      return Math.floor((elapsedMs + (running && !paused ? Date.now() - startTs : 0))/1000);
+    }
+    function fmtHMS(sec){
+      const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+      return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+    }
+    function paceString(sec, km){
+      if(km <= 0.01) return "--:--";
+      const p = sec / km;
+      const m = Math.floor(p/60), s = Math.round(p%60);
+      return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+    }
+    function haversineM(a,b){
+      const R = 6371000;
+      const toRad = x => x*Math.PI/180;
+      const dLat = toRad(b.lat-a.lat), dLon = toRad(b.lng-a.lng);
+      const s1 = Math.sin(dLat/2), s2 = Math.sin(dLon/2);
+      const aa = s1*s1 + Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*s2*s2;
+      return 2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
+    }
+    function updateRunUi(){
+      const sec = nowElapsedSec();
+      const km = distanceM / 1000;
+      const weight = parseFloat(document.getElementById("weight").value || "75");
+      const cals = Math.round((km * weight) * 1.03);
+      document.getElementById("v-time").textContent = fmtHMS(sec);
+      document.getElementById("v-dist").textContent = km.toFixed(2);
+      document.getElementById("v-pace").textContent = paceString(sec, km);
+      document.getElementById("v-cals").textContent = cals;
+      document.getElementById("v-up").textContent = Math.round(elevUp);
+      document.getElementById("v-down").textContent = Math.round(elevDown);
+    }
+
+    function onPos(pos){
+      if(!running || paused) return;
+      const p = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        alt: typeof pos.coords.altitude === "number" ? pos.coords.altitude : null,
+        acc: pos.coords.accuracy || 999,
+        t: Date.now()
+      };
+      if(p.acc > 35) return; // סינון נקודות רועשות
+      if(lastPos){
+        const d = haversineM(lastPos, p);
+        if(d > 1 && d < 80){ // מסנן קפיצות GPS
+          distanceM += d;
+          if(lastPos.alt !== null && p.alt !== null){
+            const da = p.alt - lastPos.alt;
+            if(Math.abs(da) >= 1){
+              if(da > 0) elevUp += da;
+              else elevDown += Math.abs(da);
+            }
+          }
+        }
+      }
+      lastPos = p;
+      runPath.push([p.lat, p.lng]);
+      runPolyline.setLatLngs(runPath);
+      if(!userMarker){
+        userMarker = L.circleMarker([p.lat,p.lng], { radius: 6, color: "#ff4b6d" }).addTo(map);
+      } else {
+        userMarker.setLatLng([p.lat,p.lng]);
+      }
+      map.panTo([p.lat,p.lng], { animate: true, duration: 0.3 });
+      updateRunUi();
+    }
+    function onPosErr(err){
+      setRunNote("שגיאת GPS: " + (err.message || "לא ידוע"));
+    }
+
+    function ensureWatch(){
+      if(!("geolocation" in navigator)){
+        alert("הדפדפן לא תומך GPS.");
+        return false;
+      }
+      if(watchId === null){
+        watchId = navigator.geolocation.watchPosition(onPos, onPosErr, {
+          enableHighAccuracy: true,
+          timeout: 12000,
+          maximumAge: 1000
+        });
+      }
+      return true;
+    }
+    function startRun(){
+      if(running){ setRunNote("האימון כבר פעיל."); return; }
+      if(!ensureWatch()) return;
+      running = true; paused = false; startTs = Date.now();
+      setRunNote("ריצה התחילה. אפשר להשהות ולהמשיך מתי שצריך.");
+      if(timerId) clearInterval(timerId);
+      timerId = setInterval(updateRunUi, 1000);
+      updateRunUi();
+    }
+    function pauseRun(){
+      if(!running || paused) return;
+      paused = true;
+      elapsedMs += Date.now() - startTs;
+      startTs = null;
+      setRunNote("הריצה הושהתה.");
+      updateRunUi();
+    }
+    function resumeRun(){
+      if(!running || !paused) return;
+      paused = false;
+      startTs = Date.now();
+      setRunNote("הריצה נמשכה.");
+      updateRunUi();
+    }
+    function finishRun(){
+      if(!running){ setRunNote("אין ריצה פעילה לסיום."); return; }
+      if(!paused && startTs) elapsedMs += Date.now() - startTs;
+      running = false; paused = false; startTs = null;
+      if(timerId) clearInterval(timerId);
+      timerId = null;
+      if(watchId !== null){
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      const km = distanceM / 1000;
+      const sec = Math.floor(elapsedMs / 1000);
+      const run = {
+        date: new Date().toLocaleString("he-IL"),
+        durationSec: sec,
+        distanceKm: Number(km.toFixed(3)),
+        pace: paceString(sec, km),
+        calories: Math.round((km * parseFloat(document.getElementById("weight").value || "75")) * 1.03),
+        elevUp: Math.round(elevUp),
+        elevDown: Math.round(elevDown),
+        points: runPath
+      };
+      const list = loadJson(KEY_RUNS, []);
+      list.unshift(run);
+      saveJson(KEY_RUNS, list.slice(0, 300));
+      setRunNote("הריצה הסתיימה ונשמרה בהיסטוריה.");
+      renderHistory();
+      // Reset current run state for next run
+      elapsedMs = 0; distanceM = 0; elevUp = 0; elevDown = 0; lastPos = null;
+      runPath = [];
+      runPolyline.setLatLngs([]);
+      if(userMarker){ map.removeLayer(userMarker); userMarker = null; }
+      updateRunUi();
+    }
+
+    async function planRouteFromPoints(){
+      if(plannedPoints.length < 2){
+        setRunNote("צריך לפחות 2 נקודות תכנון.");
+        return;
+      }
+      let pointsForRouting = [...plannedPoints];
+      const need = document.getElementById("route-poi-need")?.value || "none";
+      if(need !== "none"){
+        const withPois = await addRequiredPois(pointsForRouting, need);
+        if(withPois.length >= 2) pointsForRouting = withPois;
+      }
+      const coords = pointsForRouting.map(p => `${p[1]},${p[0]}`).join(";");
+      const url = `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
+      try{
+        setRunNote("מתכנן מסלול...");
+        const res = await fetch(url);
+        const data = await res.json();
+        if(!data.routes || !data.routes[0]) throw new Error("לא נמצא מסלול");
+        const routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        plannedLine.setLatLngs(routeCoords);
+        map.fitBounds(L.latLngBounds(routeCoords));
+        const km = (data.routes[0].distance / 1000).toFixed(2);
+        setRunNote(`מסלול תוכנן בהצלחה: ${km} ק"מ.`);
+      }catch(e){
+        setRunNote("נכשל תכנון מסלול. נסה נקודות קרובות יותר.");
+      }
+    }
+    function clearRoutePlan(){
+      plannedPoints = [];
+      plannedMarkers.forEach(m=>map.removeLayer(m));
+      plannedMarkers = [];
+      suggestedMarkers.forEach(m=>map.removeLayer(m));
+      suggestedMarkers = [];
+      plannedLine.setLatLngs([]);
+      setRunNote("תכנון המסלול נוקה.");
+      setSuggestLog("");
+    }
+
+    async function geocodePlace(query){
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+      const res = await fetch(url, { headers: { "Accept": "application/json" } });
+      const data = await res.json();
+      if(!data || !data[0]) return null;
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), name: data[0].display_name };
+    }
+
+    async function searchAndAddPlace(){
+      const input = document.getElementById("route-place-input");
+      const q = input.value.trim();
+      if(!q){ setSuggestLog("כתוב מקום לחיפוש."); return; }
+      try{
+        const p = await geocodePlace(q);
+        if(!p){ setSuggestLog("לא מצאתי מקום בשם הזה."); return; }
+        plannedPoints.push([p.lat, p.lng]);
+        const mk = L.marker([p.lat, p.lng]).addTo(map).bindPopup(`📍 ${p.name}`);
+        plannedMarkers.push(mk);
+        plannedLine.setLatLngs(plannedPoints);
+        map.setView([p.lat, p.lng], 15);
+        setSuggestLog(`נוספה נקודה: ${p.name}`);
+      }catch{
+        setSuggestLog("שגיאה בחיפוש מקום. נסה שוב.");
+      }
+    }
+
+    async function queryNearbyPlaces(centerLat, centerLng, queryTag, radius){
+      const q = `[out:json][timeout:25];(node["${queryTag.key}"="${queryTag.val}"](around:${radius},${centerLat},${centerLng}););out body 12;`;
+      const res = await fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        body: q
+      });
+      const data = await res.json();
+      return data.elements || [];
+    }
+
+    async function suggestRunSpotsNearby(){
+      try{
+        const center = plannedPoints[0] || [32.0853, 34.7818];
+        map.setView(center, 14);
+        suggestedMarkers.forEach(m=>map.removeLayer(m));
+        suggestedMarkers = [];
+        const parks = await queryNearbyPlaces(center[0], center[1], { key: "leisure", val: "park" }, 3500);
+        const tracks = await queryNearbyPlaces(center[0], center[1], { key: "leisure", val: "track" }, 3500);
+        const picks = [...parks.slice(0,4), ...tracks.slice(0,4)];
+        if(!picks.length){
+          setSuggestLog("לא נמצאו כרגע הצעות ריצה באזור.");
+          return;
+        }
+        picks.forEach((p, idx) => {
+          const name = p.tags?.name || `מקום ריצה ${idx+1}`;
+          const mk = L.marker([p.lat, p.lon]).addTo(map).bindPopup(`🏃 ${name}`);
+          suggestedMarkers.push(mk);
+        });
+        setSuggestLog(`נמצאו ${picks.length} מקומות מוצעים לריצה באזור.`);
+      }catch{
+        setSuggestLog("לא הצלחתי להביא הצעות כרגע.");
+      }
+    }
+
+    async function addRequiredPois(points, need){
+      const first = points[0];
+      if(!first) return points;
+      const pois = [];
+      try{
+        if(need === "drinking_water" || need === "all"){
+          const water = await queryNearbyPlaces(first[0], first[1], { key: "amenity", val: "drinking_water" }, 2500);
+          if(water[0]) pois.push([water[0].lat, water[0].lon]);
+        }
+        if(need === "toilets" || need === "all"){
+          const wc = await queryNearbyPlaces(first[0], first[1], { key: "amenity", val: "toilets" }, 2500);
+          if(wc[0]) pois.push([wc[0].lat, wc[0].lon]);
+        }
+        if(need === "shelter" || need === "all"){
+          const shelter = await queryNearbyPlaces(first[0], first[1], { key: "amenity", val: "shelter" }, 2500);
+          if(shelter[0]) pois.push([shelter[0].lat, shelter[0].lon]);
+        }
+      }catch{
+        // אם אין נתונים ממשיכים עם המסלול המקורי
+      }
+      if(!pois.length) return points;
+      const merged = [points[0], ...pois, ...points.slice(1)];
+      pois.forEach((p, i)=>{
+        const mk = L.circleMarker(p, { radius: 5, color: "#ffb020" }).addTo(map).bindPopup(`נקודת חובה ${i+1}`);
+        suggestedMarkers.push(mk);
+      });
+      setSuggestLog(`נוספו ${pois.length} נקודות חובה למסלול.`);
+      return merged;
+    }
+
+    // ===== History =====
+    function saveMonthlyProgress(){
+      const runScore = parseFloat(document.getElementById("monthly-run-score").value || "0");
+      const strScore = parseFloat(document.getElementById("monthly-strength-score").value || "0");
+      const idfScore = parseFloat(document.getElementById("monthly-idf-score").value || "0");
+      const notes = document.getElementById("monthly-notes").value.trim();
+      if(!runScore && !strScore && !idfScore){
+        alert("הזן לפחות מדד אחד לשמירה.");
+        return;
+      }
+      const list = loadJson(KEY_MONTHLY, []);
+      list.unshift({
+        date: new Date().toLocaleDateString("he-IL"),
+        monthKey: new Date().toISOString().slice(0, 7),
+        runScore,
+        strScore,
+        idfScore,
+        notes
+      });
+      saveJson(KEY_MONTHLY, list.slice(0, 48));
+      renderMonthlyProgress();
+    }
+
+    function renderMonthlyProgress(){
+      const list = loadJson(KEY_MONTHLY, []);
+      const box = document.getElementById("monthly-progress-log");
+      if(!box) return;
+      if(!list.length){
+        box.innerHTML = '<div class="mini">אין בדיקות התקדמות חודשיות עדיין.</div>';
+        return;
+      }
+      box.innerHTML = list.slice(0, 12).map((m, i) => {
+        const prev = list[i+1];
+        const runDelta = prev ? (m.runScore - prev.runScore) : 0;
+        const strDelta = prev ? (m.strScore - prev.strScore) : 0;
+        const idfDelta = prev ? (m.idfScore - prev.idfScore) : 0;
+        return `<div class="list-item">
+          <strong>${m.date}</strong> (${m.monthKey})<br/>
+          ריצה: ${m.runScore || "-"} ${prev ? `(${runDelta >= 0 ? "+" : ""}${runDelta.toFixed(1)})` : ""}<br/>
+          כוח: ${m.strScore || "-"} ${prev ? `(${strDelta >= 0 ? "+" : ""}${strDelta.toFixed(1)})` : ""}<br/>
+          צבא: ${m.idfScore || "-"} ${prev ? `(${idfDelta >= 0 ? "+" : ""}${idfDelta.toFixed(1)})` : ""}<br/>
+          <span class="mini">${m.notes || ""}</span>
+        </div>`;
+      }).join("");
+    }
+
+    function buildPeriodicTests(){
+      const freq = parseInt(document.getElementById("test-frequency").value, 10);
+      const cycles = parseInt(document.getElementById("test-cycles").value, 10);
+      const tests = [];
+      const now = new Date();
+      for(let i=1; i<=cycles; i++){
+        const d = new Date(now);
+        d.setDate(d.getDate() + i * freq * 7);
+        const cycleType = i % 3 === 0 ? "מבחן מלא" : "מבחן ביניים";
+        tests.push({
+          date: d.toLocaleDateString("he-IL"),
+          cycle: i,
+          type: cycleType,
+          runTest: i % 2 === 0 ? "5K / 3K טסט" : "2K אינטרוולים מדודים",
+          strengthTest: "שכיבות + מתח + פלאנק",
+          idfTest: i % 3 === 0 ? "בר-אור/סימולציה" : "ריצה עם עומס + כוח פונקציונלי"
+        });
+      }
+      saveJson(KEY_PERIODIC_TESTS, tests);
+      renderPeriodicTests();
+    }
+
+    function renderPeriodicTests(){
+      const box = document.getElementById("periodic-tests-log");
+      if(!box) return;
+      const tests = loadJson(KEY_PERIODIC_TESTS, []);
+      if(!tests.length){
+        box.innerHTML = '<div class="mini">עדיין לא נבנה לוח מבחנים.</div>';
+        return;
+      }
+      box.innerHTML = tests.map(t => `
+        <div class="list-item">
+          <strong>מחזור ${t.cycle}</strong> | ${t.date} | <span class="badge">${t.type}</span><br/>
+          ריצה: ${t.runTest}<br/>
+          כוח: ${t.strengthTest}<br/>
+          צבא: ${t.idfTest}
+        </div>
+      `).join("");
+    }
+
+    function exportAllData(){
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        version: "runpath-pro-max-2026",
+        runs: loadJson(KEY_RUNS, []),
+        strengthHistory: loadJson(KEY_STR, []),
+        strengthLibrary: loadJson(KEY_STR_LIBRARY, []),
+        monthlyProgress: loadJson(KEY_MONTHLY, []),
+        periodicTests: loadJson(KEY_PERIODIC_TESTS, []),
+        apiKey: localStorage.getItem(KEY_API) || ""
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `runpath-backup-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importAllData(event){
+      const file = event.target.files?.[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const data = JSON.parse(String(reader.result || "{}"));
+          if(Array.isArray(data.runs)) saveJson(KEY_RUNS, data.runs);
+          if(Array.isArray(data.strengthHistory)) saveJson(KEY_STR, data.strengthHistory);
+          if(Array.isArray(data.strengthLibrary)) saveJson(KEY_STR_LIBRARY, data.strengthLibrary);
+          if(Array.isArray(data.monthlyProgress)) saveJson(KEY_MONTHLY, data.monthlyProgress);
+          if(Array.isArray(data.periodicTests)) saveJson(KEY_PERIODIC_TESTS, data.periodicTests);
+          if(typeof data.apiKey === "string" && data.apiKey) localStorage.setItem(KEY_API, data.apiKey);
+          renderHistory();
+          renderPeriodicTests();
+          alert("ייבוא הושלם בהצלחה.");
+        }catch{
+          alert("קובץ גיבוי לא תקין.");
+        }finally{
+          event.target.value = "";
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function renderHistory(){
+      const runs = loadJson(KEY_RUNS, []);
+      const str = loadJson(KEY_STR, []);
+      const runWrap = document.getElementById("run-history");
+      const strWrap = document.getElementById("strength-history");
+      if(!runs.length) runWrap.innerHTML = '<div class="mini">אין ריצות עדיין.</div>';
+      else {
+        runWrap.innerHTML = runs.slice(0, 40).map(r => `
+          <div class="list-item">
+            <strong>${r.date}</strong><br/>
+            ${r.distanceKm} ק"מ | קצב ${r.pace} | זמן ${fmtHMS(r.durationSec)}
+            <div class="kpi"><span>🔥 ${r.calories}</span><span>⬆ ${r.elevUp}מ</span><span>⬇ ${r.elevDown}מ</span></div>
+          </div>
+        `).join("");
+      }
+      if(!str.length) strWrap.innerHTML = '<div class="mini">אין אימוני כוח עדיין.</div>';
+      else {
+        strWrap.innerHTML = str.slice(0, 60).map(s => `
+          <div class="list-item"><strong>${s.date}</strong><br/>${s.title}<br/><span class="mini">${s.details}</span></div>
+        `).join("");
+      }
+      renderMonthlyProgress();
+      renderPeriodicTests();
+    }
+
+    // ===== AI Coach =====
+    function saveApiKey(){
+      const v = document.getElementById("api-key").value.trim();
+      if(!v){ alert("לא הוזן מפתח."); return; }
+      localStorage.setItem(KEY_API, v);
+      const provider = document.getElementById("ai-provider")?.value || "openrouter";
+      localStorage.setItem(KEY_AI_PROVIDER, provider);
+      alert("מפתח נשמר מקומית בדפדפן.");
+    }
+    function addAiMsg(role, text){
+      const box = document.getElementById("ai-log");
+      const cls = role === "user" ? "background:#2b3458;" : "background:#1f2a20;border-right:3px solid #3ddc97;";
+      box.innerHTML += `<div style="${cls}padding:8px;border-radius:9px;margin-bottom:6px;font-size:12px">${text}</div>`;
+      box.scrollTop = 99999;
+    }
+    function localCoachAnswer(q){
+      const lower = q.toLowerCase();
+      if(lower.includes("תזונה") || lower.includes("אוכל")) return "לתזונה ספורטיבית: בכל ארוחה שלב חלבון איכותי, פחמימה מורכבת וירקות. לפני אימון עצים אכול פחמימה קלה 60-120 דק לפני, ואחרי אימון יעד חלבון + פחמימה לשיקום.";
+      if(lower.includes("משקל") || lower.includes("משקלים")) return "לעבודה עם משקלים: בחר עומס שמאפשר טכניקה מושלמת, השאר 1-2 חזרות ברזרבה, והתקדם בהדרגה 2.5%-5% כשכל הסטים נקיים.";
+      if(lower.includes("חודש")) return "לחודש הקרוב: 3-4 ריצות + 2-3 כוח בשבוע. שבוע 1-2 בניית בסיס, שבוע 3 עומס, שבוע 4 דלואד. למדוד שינה, דופק בוקר ועייפות.";
+      if(lower.includes("בר אור") || lower.includes("בר-אור")) return "לבר-אור: 2 אימוני איכות (400מ/1000מ) + ריצה קלה + כוח פונקציונלי. טסט 3 ק\"מ כל 10-14 יום ומעקב שיפור.";
+      return "אני יכול לענות על ריצה, כוח, תזונה, עלייה במסת שריר, ירידה בשומן, מניעת פציעות, עומסים ומשקלים. כלל זהב: 80% קל, 20% עצים, התקדמות הדרגתית ושינה טובה.";
+    }
+    async function askCoach(){
+      const q = document.getElementById("ai-q").value.trim();
+      if(!q) return;
+      document.getElementById("ai-q").value = "";
+      addAiMsg("user", q);
+      // תמיד מחזיר תשובה מיידית כדי שה-AI לא "ישבר" למשתמש
+      addAiMsg("ai", localCoachAnswer(q));
+      const key = localStorage.getItem(KEY_API);
+      const provider = localStorage.getItem(KEY_AI_PROVIDER) || (document.getElementById("ai-provider")?.value || "openrouter");
+      if(!key){
+        addAiMsg("ai", "טיפ: אם תרצה תשובת ענן מתקדמת, הוסף API key בפרופיל.");
+        return;
+      }
+      try{
+        const profile = {
+          age: document.getElementById("age").value,
+          weight: document.getElementById("weight").value
+        };
+        let res;
+        if(provider === "openrouter"){
+          res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${key}`
+            },
+            body: JSON.stringify({
+              model: "anthropic/claude-3.5-sonnet",
+              messages: [
+                {
+                  role: "system",
+                  content: `אתה מאמן ספורט ותזונה מקצועי ברמה גבוהה. אתה עונה על כל שאלת ספורט: ריצה, תוכניות אימון, משקלים, כוח (גב/חזה/כתפיים/יד קדמית/יד אחורית/אמות/בטן), תזונה, התאוששות, מניעת פציעות, ושיפור ביצועים. תענה בעברית ברורה ומעשית, עם צעדים מדויקים לביצוע. המשתמש בן ${profile.age}, משקל ${profile.weight} ק"ג.`
+                },
+                { role: "user", content: q }
+              ],
+              max_tokens: 500
+            })
+          });
+        }else{
+          res = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": key,
+              "anthropic-version": "2023-06-01"
+            },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 500,
+              system: `אתה מאמן ספורט ותזונה מקצועי ברמה גבוהה. אתה עונה על כל שאלת ספורט: ריצה, תוכניות אימון, משקלים, כוח (גב/חזה/כתפיים/יד קדמית/יד אחורית/אמות/בטן), תזונה, התאוששות, מניעת פציעות, ושיפור ביצועים. תענה בעברית ברורה ומעשית, עם צעדים מדויקים לביצוע. המשתמש בן ${profile.age}, משקל ${profile.weight} ק"ג.`,
+              messages: [{ role: "user", content: q }]
+            })
+          });
+        }
+        if(!res.ok){
+          const t = await res.text();
+          throw new Error(t || "שגיאה בשירות AI");
+        }
+        const data = await res.json();
+        const text = provider === "openrouter"
+          ? (data.choices?.[0]?.message?.content || "אין תשובה כרגע.")
+          : (data.content?.[0]?.text || "אין תשובה כרגע.");
+        addAiMsg("ai", "תשובת AI מורחבת: " + text);
+      }catch{
+        addAiMsg("ai", "תשובת ענן לא זמינה כרגע (רשת/הרשאות). התשובה המקומית כבר ניתנה מעל.");
+      }
+    }
+
+    // ===== Usability improvements =====
+    document.addEventListener("visibilitychange", () => {
+      if(document.hidden && running && !paused){
+        setRunNote("האפליקציה ברקע: המדידה יכולה להיות מוגבלת בדפדפן. מומלץ להשאיר את המסך פעיל.");
+      }
+    });
+
+    if("wakeLock" in navigator){
+      let wake = null;
+      async function requestWakeLock(){
+        try { wake = await navigator.wakeLock.request("screen"); } catch {}
+      }
+      document.addEventListener("click", requestWakeLock, { once: true });
+    }
+
+    // ===== Init =====
+    updateRunUi();
+    renderHistory();
+    const savedApi = localStorage.getItem(KEY_API);
+    if(savedApi) document.getElementById("api-key").value = savedApi;
+    const savedProvider = localStorage.getItem(KEY_AI_PROVIDER);
+    if(savedProvider && document.getElementById("ai-provider")){
+      document.getElementById("ai-provider").value = savedProvider;
+    }
+  </script>
+</body>
+</html>
